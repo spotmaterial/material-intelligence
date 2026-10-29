@@ -1,0 +1,450 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Spot Material</title>
+<style>
+  /* Layout: main area (search, Find better, then material column + grade column) beside a grey family panel */
+  :root {
+    --bg: #ffffff; --field: #ececec; --field-hover: #e2e2e2; --panel: #ececec; --chip: #767676; --soft-chip: #ececec;
+    --text: #141414; --muted: #6b6b6b; --line: #b9b9b9; --line-soft: #e3e3e3; --focus: #2563eb;
+    --r1: #1e6b34; --r2: #4e7d1e; --r3: #a16207; --r4: #c2410c; --r5: #c62828; --r6: #8e1b1b;
+    --alert: #c99a06; --tick: #3f9142; --cross: #d32f2f;
+    --font: "Myriad Pro", "Source Sans 3", "Segoe UI", system-ui, -apple-system, sans-serif;
+  }
+  /* Overall size: 0.68 = everything about a third smaller. Change this one number to scale the page. */
+  html { zoom: 0.68; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--font); font-size: 16px; }
+  a { color: var(--text); }
+  .vh { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+  .page { max-width: 1440px; margin: 0 auto; padding-block: 40px 72px;
+          padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+          display: flex; flex-wrap: wrap; gap: 40px 48px; align-items: flex-start; }
+  .main { flex: 999 1 640px; min-width: 0; display: flex; flex-direction: column; gap: 32px; }
+  .family-panel { flex: 1 1 320px; min-width: 0; background: var(--panel); border-radius: 6px; padding: 22px 22px 22px 22px;
+                  display: flex; flex-direction: column; gap: 18px; }
+  .label { margin: 0; font-size: 18px; color: var(--muted); font-weight: 400; }
+
+  /* Search bar */
+  form.search { display: flex; align-items: center; gap: 12px; background: var(--field); border-radius: 999px; padding: 6px 8px; min-height: 56px; }
+  .dot { flex: 0 0 40px; height: 40px; border-radius: 50%; background: #9b9b9b; }
+  a.dot { display: block; cursor: pointer; }
+  a.dot:hover { background: #7a7a7a; }
+  form.search input { flex: 1 1 auto; min-width: 0; border: 0; background: transparent; font: inherit; font-size: 22px; color: var(--text); padding: 6px 4px; }
+  form.search input::placeholder { color: #8c8c8c; }
+  form.search input:focus { outline: none; }
+  form.search:focus-within { box-shadow: 0 0 0 2px var(--focus); }
+  .go { flex: 0 0 44px; height: 44px; border: 0; border-radius: 50%; background: transparent; color: #8c8c8c; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
+  .go:hover { color: var(--text); }
+
+  /* Chips */
+  .chips { display: flex; flex-wrap: wrap; gap: 14px 16px; }
+  .chips .chip { flex: 0 1 auto; gap: 10px; }
+  .chip .n { font-size: 14px; opacity: .75; font-variant-numeric: tabular-nums; }
+  .chip { min-height: 52px; padding: 0 22px; border-radius: 999px; background: var(--chip); color: #fff; font-size: 18px;
+          display: flex; align-items: center; text-decoration: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  a.chip:hover { background: #5f5f5f; }
+  .chip.off { background: #bdbdbd; color: #fff; }
+  .similar { display: flex; flex-direction: column; gap: 10px; }
+  .similar .chip { background: var(--soft-chip); color: #5c5c5c; max-width: 280px; min-height: 44px; font-size: 17px; }
+  .similar a.chip:hover { background: var(--field-hover); color: var(--text); }
+
+  /* Two columns under the chips */
+  .cols { display: flex; flex-wrap: wrap; gap: 32px 56px; align-items: flex-start; }
+  .left { flex: 999 1 420px; min-width: 0; display: flex; flex-direction: column; gap: 28px; }
+  .middle { flex: 1 1 260px; min-width: 0; display: flex; flex-direction: column; gap: 40px; }
+  h1 { margin: 4px 0 0; font-size: 32px; font-weight: 400; text-wrap: balance; }
+  .recycled-note { font-size: 15px; color: var(--muted); }
+  .grade-select { position: relative; max-width: 360px; }
+  select { appearance: none; -webkit-appearance: none; width: 100%; height: 54px; border: 0; border-radius: 999px;
+           background: var(--field) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='22' height='22' viewBox='0 0 24 24' fill='none' stroke='%237a7a7a' stroke-width='1.6'%3E%3Cpath d='M5 9l7 7 7-7'/%3E%3C/svg%3E") no-repeat right 20px center;
+           padding: 0 50px 0 24px; font: inherit; font-size: 18px; color: #4a4a4a; cursor: pointer; text-overflow: ellipsis; }
+  select:hover { background-color: var(--field-hover); }
+  select:disabled { cursor: default; }
+
+  .ratings { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 22px 40px; padding-top: 8px; }
+  .rating { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
+  .rating .name { font-size: 17px; }
+  .badge { min-width: 116px; padding: 2px 6px; border-radius: 3px; color: #fff; font-size: 18px; line-height: 1.35; }
+  .badge.none { background: transparent; color: var(--muted); box-shadow: inset 0 0 0 1px var(--line-soft); font-size: 15px; }
+  .l1 { background: var(--r1); } .l2 { background: var(--r2); } .l3 { background: var(--r3); }
+  .l4 { background: var(--r4); } .l5 { background: var(--r5); } .l6 { background: var(--r6); }
+  .src { font-size: 13px; color: var(--muted); }
+  hr { border: 0; border-top: 1px solid var(--line); margin: 0; width: 100%; }
+
+  table.values { border-collapse: collapse; font-size: 17px; }
+  table.values td { padding: 8px 28px 8px 0; vertical-align: top; }
+  table.values td.v { white-space: nowrap; font-variant-numeric: tabular-nums; }
+  table.values .u { color: #8a8a8a; margin-left: 4px; }
+  table.values .basis { display: block; font-size: 13px; color: var(--muted); }
+  .table-scroll { overflow-x: auto; }
+  .hint { margin: 0; font-size: 14px; color: var(--muted); }
+
+  /* Related innovations: full width under both columns */
+  .innovations { flex-basis: 100%; min-width: 0; border-top: 1px solid var(--line); padding-top: 28px;
+                 display: flex; flex-direction: column; gap: 18px; }
+  .innov-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 24px; }
+  .innov-head .hint { max-width: 60ch; }
+  .innov-list { list-style: none; margin: 0; padding: 0; display: grid;
+                grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px 24px; }
+  .innov-list li { display: flex; flex-direction: column; gap: 6px; padding: 0 0 16px; background: var(--field);
+                   border-radius: 10px; min-width: 0; overflow: hidden; }
+  .innov-list li > :not(.innov-img) { margin-inline: 18px; }
+  .innov-img { display: block; width: 100%; max-width: 100%; aspect-ratio: 4 / 3; object-fit: cover; background: #dcdcdc;
+               margin-bottom: 8px; }
+  .innov-list a { font-size: 18px; color: var(--text); text-decoration: none; line-height: 1.25; }
+  .innov-list a:hover, .innov-list a:focus-visible { text-decoration: underline; text-underline-offset: 3px; }
+  .innov-why { font-size: 13px; color: var(--muted); }
+  .innov-why.named { color: #1e6b34; }
+  .innov-snip { margin: 0; font-size: 15px; line-height: 1.4; color: #3d3d3d;
+                display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+  .more-btn { align-self: flex-start; height: 44px; padding: 0 22px; border: 0; border-radius: 999px; background: var(--field);
+              font: inherit; font-size: 16px; cursor: pointer; }
+  .more-btn:hover { background: var(--field-hover); }
+
+  .two { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 24px 40px; }
+  .two h2 { margin: 0 0 10px; font-size: 18px; font-weight: 400; }
+  ul.icons { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; font-size: 17px; }
+  ul.icons li { display: flex; gap: 12px; align-items: flex-start; }
+  ul.icons svg { flex: 0 0 20px; margin-top: 1px; }
+
+  /* Compliance: the status icon is a button; hover, keyboard focus or tap shows what the scheme is and the note */
+  #compliance li { position: relative; }
+  #compliance { --applies: #2f5fb3; }
+  #compliance li.cert-group { display: block; margin-top: 6px; font-size: 13px; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+  #compliance li.cert-group:first-child { margin-top: 0; }
+  .c-name { display: flex; flex-direction: column; }
+  .c-state { font-size: 13px; color: var(--muted); }
+  .c-state.bad { color: var(--cross); font-weight: 600; }
+  .status-btn { flex: 0 0 auto; width: 26px; height: 26px; margin: -3px -3px 0; padding: 3px; border: 0; border-radius: 50%;
+                background: transparent; cursor: help; display: inline-flex; }
+  .status-btn:hover, .status-btn[aria-expanded="true"] { box-shadow: 0 0 0 2px #141414; }
+  .tip { position: absolute; z-index: 10; top: calc(100% + 8px); left: -10px; width: max-content; max-width: min(380px, 85vw);
+         padding: 12px 14px; background: #141414; color: #fff; border-radius: 8px; font-size: 15px; line-height: 1.45;
+         box-shadow: 0 4px 16px rgba(0,0,0,.18); visibility: hidden; opacity: 0; transition: opacity .12s;
+         display: flex; flex-direction: column; gap: 6px; }
+  .tip::before { content: ""; position: absolute; top: -6px; left: 16px; border: 6px solid transparent; border-top: 0;
+                 border-bottom-color: #141414; }
+  .tip::after { content: ""; position: absolute; left: 0; right: 0; top: -10px; height: 10px; } /* keeps hover alive across the gap */
+  .tip .t-status { font-weight: 600; }
+  .tip .t-kind { color: #bdbdbd; font-size: 13px; }
+  .tip .t-for { color: #e6e6e6; }
+  .tip a { color: #9cc7ff; }
+  .cert-item:hover .tip, .cert-item:focus-within .tip, .status-btn[aria-expanded="true"] ~ .tip { visibility: visible; opacity: 1; }
+  .cert-item[data-hidden] .tip { visibility: hidden; opacity: 0; }
+  @media (prefers-reduced-motion: reduce) { .tip { transition: none; } }
+  @media (max-width: 700px) {
+    /* Narrow screens: the note opens inside the list (full width) instead of floating, so it never runs off screen */
+    #compliance li { flex-wrap: wrap; }
+    #compliance li > span:not(.tip) { flex: 1 1 0; min-width: 0; }
+    .tip { position: static; display: none; width: auto; max-width: none; flex-basis: 100%; margin-top: 6px; visibility: visible; opacity: 1; }
+    .tip::before, .tip::after { display: none; }
+    .cert-item:hover .tip, .cert-item:focus-within .tip { display: none; }
+    .status-btn[aria-expanded="true"] ~ .tip { display: flex; }
+  }
+  .text-scroll { max-height: 520px; overflow-y: auto; padding-right: 14px; font-size: 17px; line-height: 1.45;
+                 white-space: pre-line; scrollbar-color: #b5b5b5 transparent; }
+  .family-panel .text-scroll { max-height: 1220px; }
+
+  .note { margin: 0; padding: 16px 20px; background: var(--field); border-radius: 12px; font-size: 16px; }
+  .note.error { background: #fdecec; color: #8e1b1b; }
+  .back { font-size: 15px; color: var(--muted); text-decoration: underline; text-underline-offset: 3px; align-self: flex-start; }
+  footer { flex-basis: 100%; font-size: 14px; color: var(--muted); border-top: 1px solid var(--line-soft); padding-top: 16px; }
+  @media (max-width: 560px) {
+    form.search input { font-size: 19px; }
+    h1 { font-size: 27px; }
+    .similar .chip { max-width: none; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="main">
+    <form class="search" action="search.html" method="get" role="search">
+      <a class="dot" href="search.html" title="Home: new search" aria-label="Home: start a new search"></a>
+      <label for="q" class="vh">Search materials</label>
+      <input id="q" name="q" type="search" placeholder="Search query here" autocomplete="off">
+      <button class="go" type="submit" aria-label="Search">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"></circle><path d="M20 20l-4.8-4.8"></path></svg>
+      </button>
+    </form>
+    <a class="back" id="back" href="search.html" hidden>Back to results</a>
+
+    <p class="note" id="loading">Loading…</p>
+    <p class="note error" id="error" hidden></p>
+
+    <nav aria-labelledby="betterLabel" id="betterNav" hidden>
+      <h2 class="label" id="betterLabel" style="margin-bottom:12px">Find better</h2>
+      <div class="chips" id="better"></div>
+    </nav>
+
+    <div class="cols" id="content" hidden>
+      <div class="left">
+        <div>
+          <p class="label" id="kindLabel">Material</p>
+          <h1 id="name"></h1>
+          <div class="recycled-note" id="variants"></div>
+        </div>
+        <div class="grade-select" id="gradeWrap">
+          <label for="grade" class="vh">Grade</label>
+          <select id="grade"></select>
+        </div>
+        <div class="ratings" id="ratings"></div>
+        <p class="hint">Ratings use provisional thresholds until they are agreed. "Family value" means the grade has no value of its own.</p>
+        <hr>
+        <section>
+          <h2 class="label" style="margin-bottom:12px">Typical design properties</h2>
+          <div class="table-scroll"><table class="values" id="values"><tbody></tbody></table></div>
+          <p class="hint" id="unitsHint" style="margin-top:8px">Units are proposed and still to be confirmed.</p>
+        </section>
+        <hr>
+        <div class="two">
+          <section><h2>Sustainability concerns</h2><ul class="icons" id="concerns"></ul></section>
+          <section><h2>Rules &amp; certifications to check</h2><ul class="icons" id="compliance"></ul></section>
+        </div>
+      </div>
+
+      <div class="middle">
+        <section>
+          <h2 class="label" id="aboutLabel" style="margin-bottom:6px">About this grade</h2>
+          <div class="text-scroll" id="about" tabindex="0"></div>
+        </section>
+        <nav class="similar" aria-labelledby="similarLabel" id="similarNav">
+          <h2 class="label" id="similarLabel">Explore similar</h2>
+          <div class="similar" id="similar"></div>
+        </nav>
+      </div>
+    </div>
+  </div>
+
+  <aside class="family-panel" id="familyPanel" hidden>
+    <h2 class="label" id="familyLabel">About this material family</h2>
+    <div class="text-scroll" id="familyText" tabindex="0"></div>
+  </aside>
+
+  <section class="innovations" id="innovations" aria-labelledby="innovLabel" hidden>
+    <div class="innov-head">
+      <h2 class="label" id="innovLabel">Related innovations</h2>
+      <p class="hint">Chosen by meaning: innovations whose descriptions are closest to this material's.
+        Innovations aren't linked to families in the data yet.</p>
+    </div>
+    <ul class="innov-list" id="innovList"></ul>
+    <button type="button" class="more-btn" id="innovMore" hidden>Show more innovations</button>
+  </section>
+
+  <footer>Test build of the Spot Material page. Reads published records only.</footer>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+  const SUPABASE_URL = 'https://bjkkqawalpuvsubnbodt.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_ZZN2JFwNHFbBLLjh2DE3cg_4t1YvQ7m';
+  const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  const $ = (id) => document.getElementById(id);
+
+  const ICON = {
+    alert: '<svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l10 18H2z" fill="#f5c400" stroke="#141414" stroke-width="1.6" stroke-linejoin="round"></path><path d="M12 10v5M12 17.6v.4" stroke="#141414" stroke-width="2" stroke-linecap="round"></path></svg>',
+    tick: '<svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="var(--tick)"></circle><path d="M7.5 12.5l3 3 6-6" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg>',
+    cross: '<svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="var(--cross)"></circle><path d="M8.5 8.5l7 7M15.5 8.5l-7 7" stroke="#fff" stroke-width="2.2" stroke-linecap="round"></path></svg>',
+    applies: '<svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="var(--applies)"></circle><path d="M12 11v6M12 7.4v.4" stroke="#fff" stroke-width="2.2" stroke-linecap="round"></path></svg>',
+    available: '<svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9.2" fill="#fff" stroke="var(--tick)" stroke-width="1.8"></circle><path d="M7.5 12.5l3 3 6-6" fill="none" stroke="var(--tick)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg>',
+    unknown: '<svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="#9b9b9b"></circle><path d="M9.6 9.6a2.4 2.4 0 1 1 3.4 2.2c-.6.3-1 .9-1 1.6v.4M12 17v.4" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"></path></svg>'
+  };
+
+  const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const searchLink = (params) => 'search.html?' + new URLSearchParams(params).toString();
+  function levelClass(r) {
+    if (!r || r.level == null) return 'none';
+    let l = Number(r.level);
+    if (r.better === 'higher') l = [0, 6, 5, 3, 2, 1][l] || 1;
+    return 'l' + l;
+  }
+  function fmt(n) {
+    const x = Number(n);
+    if (!isFinite(x)) return '';
+    return Math.abs(x) >= 1000 ? x.toLocaleString('en-GB', { maximumFractionDigits: 0 }) : String(+x.toPrecision(4));
+  }
+  function valueText(v) {
+    if (v.raw) return v.raw.replace(/(\d)\s*-\s*(\d)/g, '$1–$2');
+    if (v.min != null && v.max != null) return `${fmt(v.min)}–${fmt(v.max)}`;
+    return fmt(v.typical ?? v.min ?? v.max);
+  }
+  const unitText = (u) => !u ? '' : u.replace(/\s*\((confirm|define)[^)]*\)/i, '').replace(/^currency\/kg.*/, 'per kg').replace(/^unknown$/, '').replace(/^-$/, '');
+
+  function render(d) {
+    const fam = d.family, item = d.item, terms = item.terms || {};
+    const title = fam && item.kind === 'grade' && !item.name.toLowerCase().startsWith(fam.name.toLowerCase())
+      ? `${fam.name} ${item.name}` : item.name;
+    document.title = title + ' · Spot Material';
+    $('name').textContent = title;
+    $('kindLabel').textContent = item.kind === 'innovation' ? 'Innovation' : 'Material';
+
+    const variants = [];
+    if (item.supply_route === 'recycled') variants.push('Recycled');
+    if (item.variant_of) variants.push(`Recycled version of <a href="material.html?code=${encodeURIComponent(item.variant_of.code)}">${esc(item.variant_of.name)}</a>`);
+    for (const v of item.recycled_versions || []) variants.push(`Recycled version: <a href="material.html?code=${encodeURIComponent(v.code)}">${esc(v.name)}</a>`);
+    $('variants').innerHTML = variants.join(' · ');
+
+    // Grade picker: the family's grades
+    const grades = fam ? fam.grades : [];
+    $('gradeWrap').hidden = grades.length < 2;
+    $('grade').innerHTML = grades.map((g) => `<option value="${esc(g.code)}"${g.code === item.code ? ' selected' : ''}>Grade: ${esc(g.name)}${g.supply_route === 'recycled' ? ' (recycled)' : ''}</option>`).join('');
+
+    // Ratings (grade level, family value where the grade has none)
+    $('ratings').innerHTML = (item.ratings || []).map((r) => `
+      <div class="rating">
+        <span class="name">${esc(r.label_text)}</span>
+        <span class="badge ${levelClass(r)}">${esc(r.label || 'No data yet')}</span>
+        ${r.source === 'family' ? '<span class="src">Family value</span>' : ''}
+      </div>`).join('');
+
+    // Typical design properties
+    const rows = item.values || [];
+    $('values').querySelector('tbody').innerHTML = rows.length ? rows.map((v) => `
+      <tr><td class="v">${esc(valueText(v))}<span class="u">${esc(unitText(v.unit))}</span></td>
+          <td>${esc(v.label)}${v.condition ? ` (${esc(v.condition)})` : ''}</td></tr>`).join('')
+      : '<tr><td>No values recorded yet.</td></tr>';
+    $('unitsHint').hidden = !rows.length;
+
+    // Concerns and compliance
+    const concerns = terms.circularity_concern || [];
+    $('concerns').innerHTML = concerns.length ? concerns.map((c) => `<li>${ICON.alert}<span>${esc(c.label)}</span></li>`).join('')
+      : '<li><span class="hint">None recorded</span></li>';
+    const comp = item.compliance || [];
+    const KIND = { regulation: 'Legislation', certification: 'Certification', label: 'Label', standard: 'Standard' };
+    // icon, word for the note, short line under the name
+    const STATUS = {
+      complies:            { icon: ICON.tick,      word: 'Complies',                    line: 'Complies' },
+      does_not_comply:     { icon: ICON.cross,     word: 'Does not comply',             line: 'Does not comply', bad: true },
+      applies:             { icon: ICON.applies,   word: 'Applies to this material',    line: 'Applies' },
+      available_certified: { icon: ICON.available, word: 'Certified versions available', line: 'Available certified' },
+      unknown:             { icon: ICON.unknown,   word: 'Unclear: check with supplier', line: 'Check with supplier' }
+    };
+    const ORDER = ['does_not_comply', 'complies', 'applies', 'unknown', 'available_certified'];
+    const rank = (c) => { const r = ORDER.indexOf(c.status); return r < 0 ? 9 : r; };
+    const groups = [
+      ['Legislation', comp.filter((c) => c.kind === 'regulation')],
+      ['Certifications & labels', comp.filter((c) => c.kind !== 'regulation')]
+    ].filter(([, list]) => list.length);
+    let i = 0;
+    const row = (c) => {
+        const st = STATUS[c.status] || STATUS.unknown;
+        const kind = [KIND[c.kind] || '', c.jurisdiction || ''].filter(Boolean).join(' · ');
+        const tipId = 'tip-' + (i++);
+        const tip = `<span class="tip" role="tooltip" id="${tipId}">
+            <span class="t-status">${st.word}</span>
+            ${kind ? `<span class="t-kind">${esc(kind)}</span>` : ''}
+            ${c.description ? `<span>${esc(c.description)}</span>` : ''}
+            ${c.detail ? `<span class="t-for">For this material: ${esc(c.detail)}</span>` : ''}
+            ${c.url ? `<a href="${esc(c.url)}" target="_blank" rel="noopener">More about ${esc(c.code)}</a>` : ''}
+          </span>`;
+        return `<li class="cert-item"><button type="button" class="status-btn" aria-label="${st.word}: about ${esc(c.code)}"
+            aria-expanded="false" aria-describedby="${tipId}">${st.icon}</button><span class="c-name"><span>${esc(c.title || c.code)}</span><span class="c-state${st.bad ? ' bad' : ''}">${st.line}</span></span>${tip}</li>`;
+    };
+    $('compliance').innerHTML = groups.length
+      ? groups.map(([name, list]) => `<li class="cert-group" role="presentation">${esc(name)}</li>` +
+          list.slice().sort((a, b) => rank(a) - rank(b) || String(a.title || a.code).localeCompare(String(b.title || b.code))).map(row).join('')).join('')
+      : `<li>${ICON.unknown}<span class="hint">No certification or legislation data yet</span></li>`;
+
+    // About this grade / About this material family
+    const isGrade = item.kind === 'grade';
+    $('aboutLabel').textContent = isGrade ? 'About this grade' : item.kind === 'innovation' ? 'About this innovation' : 'About this material';
+    $('about').textContent = (item.summary || '').trim() || 'No description yet.';
+    const showFamily = fam && fam.summary && fam.code !== item.code;
+    $('familyPanel').hidden = !showFamily;
+    if (showFamily) $('familyText').textContent = fam.summary.trim();
+
+    // Find better: the options that apply to this material (rules live in the find_better_options table)
+    loadBetter(item.code, title);
+
+    // Explore similar: this grade's reasons for use, each opens a search for materials sharing it
+    const reasons = terms.reason_for_use || [];
+    $('similarNav').hidden = !reasons.length;
+    $('similar').innerHTML = reasons.map((r) => `<a class="chip" href="${searchLink({ t: 'reason_for_use:' + r.slug })}">${esc(r.label)}</a>`).join('');
+
+    $('loading').hidden = true;
+    $('betterNav').hidden = false;
+    $('content').hidden = false;
+  }
+
+  async function loadBetter(code, title) {
+    $('better').innerHTML = '<span class="hint">Finding alternatives…</span>';
+    const { data, error } = await db.rpc('better_options', { p_code: code });
+    if (error) { $('better').innerHTML = `<span class="hint">Could not load options: ${esc(error.message)}</span>`; return; }
+    if (!data.length) { $('better').innerHTML = '<span class="hint">No options apply to this material yet.</span>'; return; }
+    $('better').innerHTML = data.map((o) => Number(o.n) > 0
+      ? `<a class="chip" href="${searchLink({ better: o.key, than: code, thanName: title })}" title="${o.n} alternatives">${esc(o.label)}<span class="n">${o.n}</span></a>`
+      : `<span class="chip off" title="No alternatives found that share a format and application">${esc(o.label)}</span>`).join('');
+  }
+
+  async function load(code) {
+    const { data, error } = await db.rpc('get_material_v2', { p_code: code });
+    if (error || !data) {
+      $('loading').hidden = true;
+      $('error').hidden = false;
+      $('error').textContent = error ? 'Could not load this material: ' + error.message : 'This material was not found, or it is still a draft.';
+      return;
+    }
+    render(data);
+    if (data.item.kind !== 'innovation') loadInnovations(data.item.code, 8);
+  }
+
+  // Related innovations (by meaning; boosted when the innovation names this family)
+  async function loadInnovations(code, limit) {
+    const { data, error } = await db.rpc('related_innovations', { p_code: code, p_limit: limit });
+    if (error || !data || !data.length) { $('innovations').hidden = true; return; }
+    const imgBase = SUPABASE_URL + '/storage/v1/object/public/images/';
+    $('innovList').innerHTML = data.map((r) => `
+      <li>
+        ${r.image_path
+          ? `<img class="innov-img" src="${imgBase + r.image_path.split('/').map(encodeURIComponent).join('/')}" alt="" loading="lazy">`
+          : '<div class="innov-img" aria-hidden="true"></div>'}
+        <a href="innovation.html?code=${encodeURIComponent(r.code)}">${esc(r.name)}</a>
+        <span class="innov-why${r.mentions_family ? ' named' : ''}">${r.mentions_family
+          ? 'Mentions ' + esc(String(r.family_name).replace(/\s*\(.*\)/, '')) : 'Similar description'}</span>
+        ${r.snippet ? `<p class="innov-snip">${esc(r.snippet)}</p>` : ''}
+      </li>`).join('');
+    $('innovations').hidden = false;
+    $('innovMore').hidden = limit >= 24 || data.length < limit;
+    $('innovMore').onclick = () => loadInnovations(code, 24);
+  }
+
+  // Compliance notes: tap or click the status icon toggles (for touch screens); Escape or a click elsewhere closes
+  const closeTips = (except) => document.querySelectorAll('.status-btn[aria-expanded="true"]').forEach((b) => {
+    if (b !== except) b.setAttribute('aria-expanded', 'false');
+  });
+  $('compliance').addEventListener('click', (e) => {
+    const b = e.target.closest('.status-btn');
+    if (!b) return;
+    closeTips(b);
+    b.closest('.cert-item').removeAttribute('data-hidden');
+    b.setAttribute('aria-expanded', String(b.getAttribute('aria-expanded') !== 'true'));
+  });
+  document.addEventListener('click', (e) => { if (!e.target.closest('.cert-item')) closeTips(); });
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape') return;
+    closeTips();
+    document.querySelectorAll('.cert-item:hover, .cert-item:focus-within').forEach((li) => li.setAttribute('data-hidden', ''));
+  });
+  // Escape hides the open note until the pointer or focus leaves that item
+  $('compliance').addEventListener('mouseleave', (e) => { if (e.target.classList && e.target.classList.contains('cert-item')) e.target.removeAttribute('data-hidden'); }, true);
+  $('compliance').addEventListener('focusout', (e) => { const li = e.target.closest('.cert-item'); if (li && !li.contains(e.relatedTarget)) li.removeAttribute('data-hidden'); });
+
+  $('grade').addEventListener('change', (e) => { location.href = 'material.html?code=' + encodeURIComponent(e.target.value); });
+
+  if (history.length > 1 && (!document.referrer || /search\.html/.test(document.referrer))) {
+    $('back').hidden = false;
+    $('back').addEventListener('click', (e) => { e.preventDefault(); history.back(); });
+  }
+
+  const code = new URLSearchParams(location.search).get('code');
+  // Innovations have their own page
+  if (code && code.startsWith('INN-')) location.replace('innovation.html?code=' + encodeURIComponent(code));
+  else if (code) load(code);
+  else { $('loading').hidden = true; $('error').hidden = false; $('error').textContent = 'No material chosen. Use the search to pick one.'; }
+</script>
+</body>
+</html>

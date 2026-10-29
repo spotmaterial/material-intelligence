@@ -1,0 +1,321 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Innovation · Spot Material</title>
+<style>
+  /* Innovation page: search bar, name, image beside "About this innovation", company / last checked /
+     availability under the image, then related materials grouped by family. */
+  :root {
+    --bg: #ffffff; --field: #ececec; --field-hover: #e2e2e2; --chip: #767676;
+    --text: #141414; --muted: #6b6b6b; --line: #b9b9b9; --line-soft: #e3e3e3; --focus: #2563eb;
+    --r1: #1e6b34; --r2: #4e7d1e; --r3: #a16207; --r4: #c2410c; --r5: #c62828; --r6: #8e1b1b;
+    --font: "Myriad Pro", "Source Sans 3", "Segoe UI", system-ui, -apple-system, sans-serif;
+  }
+  /* Overall size: 0.68 = everything about a third smaller, same as the other pages */
+  html { zoom: 0.68; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--font); font-size: 16px; }
+  a { color: var(--text); }
+  .vh { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+  main { max-width: 1440px; margin: 0 auto; padding-block: 40px 72px;
+         padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+         display: flex; flex-direction: column; gap: 32px; }
+  [hidden] { display: none !important; }
+  .content { display: flex; flex-direction: column; gap: 32px; }
+  .label { margin: 0; font-size: 18px; color: var(--muted); font-weight: 400; }
+  .hint { margin: 0; font-size: 14px; color: var(--muted); }
+
+  /* Search bar (same as the other pages) */
+  form.search { display: flex; align-items: center; gap: 12px; background: var(--field); border-radius: 999px; padding: 6px 8px; min-height: 56px; }
+  .dot { flex: 0 0 40px; height: 40px; border-radius: 50%; background: #9b9b9b; display: block; }
+  a.dot:hover { background: #7a7a7a; }
+  form.search input { flex: 1 1 auto; min-width: 0; border: 0; background: transparent; font: inherit; font-size: 22px; color: var(--text); padding: 6px 4px; }
+  form.search input::placeholder { color: #8c8c8c; }
+  form.search input:focus { outline: none; }
+  form.search:focus-within { box-shadow: 0 0 0 2px var(--focus); }
+  .go { flex: 0 0 44px; height: 44px; border: 0; border-radius: 50%; background: transparent; color: #8c8c8c; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
+  .go:hover { color: var(--text); }
+  .back { font-size: 15px; color: var(--muted); text-decoration: underline; text-underline-offset: 3px; align-self: flex-start; }
+
+  h1 { margin: 4px 0 0; font-size: 32px; font-weight: 400; text-wrap: balance; }
+
+  /* Image beside the description */
+  .top { display: flex; flex-wrap: wrap; gap: 32px 56px; align-items: stretch; }
+  /* Image column: about 60% of its earlier width (was the full width beside the text) */
+  .visual { flex: 0 1 650px; min-width: 0; display: flex; flex-direction: column; gap: 28px; }
+  .hero { display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: cover; background: #dcdcdc; }
+  .about { flex: 1 1 300px; min-width: 0; max-width: 720px; display: flex; flex-direction: column; gap: 8px; }
+  .text-scroll { max-height: 480px; overflow-y: auto; padding-right: 14px; font-size: 18px; line-height: 1.45;
+                 white-space: pre-line; scrollbar-color: #b5b5b5 transparent; }
+  /* Cost / Carbon / Circularity potential for the innovation (drafted in Airtable) */
+  .inn-ratings { display: flex; flex-direction: column; gap: 6px; padding-top: 14px; }
+  .inn-ratings .badges { padding-top: 0; }
+  .tags { display: flex; flex-wrap: wrap; gap: 8px; padding-top: 12px; }
+  .tag { padding: 6px 14px; border-radius: 999px; background: var(--field); font-size: 15px; color: #4a4a4a; text-decoration: none; }
+  a.tag:hover { background: var(--field-hover); color: var(--text); }
+
+  /* Company / Last checked / Availability */
+  .facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 18px 32px; margin: 0; }
+  .facts div { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+  .facts dt { font-size: 18px; color: var(--muted); }
+  .facts dd { margin: 0; font-size: 18px; line-height: 1.35; overflow-wrap: anywhere; }
+  .facts .draft { display: block; font-size: 13px; color: var(--muted); }
+  hr { border: 0; border-top: 1px solid var(--line); margin: 0; width: 100%; }
+
+  /* Related materials: same rows as the search results */
+  .rel-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 6px 24px; }
+  .rel-head .hint { max-width: 70ch; }
+  ul.results { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+  li.tier { padding: 28px 0 4px; font-size: 18px; color: var(--muted); border-bottom: 1px solid var(--line); }
+  li.tier:first-child { padding-top: 4px; }
+  .row { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 10px 32px; padding: 22px 0;
+         border-bottom: 1px solid var(--line); }
+  .r-main { flex: 1 1 320px; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+  .r-name { font-size: 28px; line-height: 1.15; color: var(--text); text-decoration: none; }
+  .r-name:hover { text-decoration: underline; text-underline-offset: 4px; }
+  .r-why { font-size: 18px; color: #8a8a8a; }
+  .badges { display: flex; flex-wrap: wrap; gap: 10px 16px; padding-top: 6px; }
+  .badge { min-width: 170px; padding: 4px 8px; border-radius: 3px; color: #fff; font-size: 15px; line-height: 1.3; white-space: nowrap; }
+  .badge.none { background: transparent; color: var(--muted); box-shadow: inset 0 0 0 1px var(--line); }
+  .l1 { background: var(--r1); } .l2 { background: var(--r2); } .l3 { background: var(--r3); }
+  .l4 { background: var(--r4); } .l5 { background: var(--r5); } .l6 { background: var(--r6); }
+  li.fam { padding: 22px 0 8px; border-bottom: 1px solid var(--line); display: flex; flex-direction: column; }
+  li.fam > .r-main { flex: none; }
+  .fam-sub { font-size: 15px; color: var(--muted); }
+  ul.grades { list-style: none; margin: 8px 0 0; padding: 0 0 0 24px; }
+  ul.grades .row { padding: 14px 0; border-bottom: 0; border-top: 1px solid #ededed; }
+  ul.grades .r-name { font-size: 22px; }
+  ul.grades .r-why { font-size: 16px; }
+  ul.grades li[hidden] { display: none; }
+  .link-btn { background: none; border: 0; padding: 8px 0; font: inherit; font-size: 15px; color: var(--muted);
+              text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+  .link-btn:hover { color: var(--text); }
+  .more-wrap { display: flex; justify-content: center; padding-top: 8px; }
+  .more { height: 48px; padding: 0 28px; border: 0; border-radius: 999px; background: var(--field); font: inherit; font-size: 16px; cursor: pointer; }
+  .more:hover { background: var(--field-hover); }
+
+  .note { margin: 0; padding: 16px 20px; background: var(--field); border-radius: 12px; font-size: 16px; }
+  .note.error { background: #fdecec; color: #8e1b1b; }
+  footer { font-size: 14px; color: var(--muted); border-top: 1px solid var(--line-soft); padding-top: 16px; }
+  @media (max-width: 560px) {
+    form.search input { font-size: 19px; }
+    h1 { font-size: 27px; }
+    .r-name { font-size: 23px; }
+    .badge { min-width: 0; }
+    ul.grades { padding-left: 12px; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <form class="search" action="search.html" method="get" role="search">
+    <a class="dot" href="search.html" title="Home: new search" aria-label="Home: start a new search"></a>
+    <label for="q" class="vh">Search materials</label>
+    <input id="q" name="q" type="search" placeholder="Search query here" autocomplete="off">
+    <button class="go" type="submit" aria-label="Search">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"></circle><path d="M20 20l-4.8-4.8"></path></svg>
+    </button>
+  </form>
+  <a class="back" id="back" href="search.html" hidden>Back</a>
+
+  <p class="note" id="loading">Loading…</p>
+  <p class="note error" id="error" hidden></p>
+
+  <div id="content" class="content" hidden>
+    <div>
+      <p class="label">Innovation</p>
+      <h1 id="name"></h1>
+    </div>
+
+    <div class="top">
+      <div class="visual">
+        <div id="heroWrap"></div>
+        <dl class="facts">
+          <div><dt>Company</dt><dd id="company"></dd></div>
+          <div><dt>Last checked</dt><dd id="checked"></dd></div>
+          <div><dt>Availability</dt><dd id="availability"></dd></div>
+          <div id="linkWrap" hidden><dt>Website</dt><dd id="link"></dd></div>
+        </dl>
+      </div>
+      <section class="about" aria-labelledby="aboutLabel">
+        <h2 class="label" id="aboutLabel">About this innovation</h2>
+        <div class="text-scroll" id="about" tabindex="0"></div>
+        <div class="inn-ratings" id="ratingsWrap" hidden>
+          <div class="badges" id="ratings"></div>
+          <p class="hint" id="ratingsBasis"></p>
+        </div>
+        <div class="tags" id="tags"></div>
+      </section>
+    </div>
+
+    <hr>
+
+    <section aria-labelledby="relLabel" style="display:flex; flex-direction:column; gap:12px">
+      <div class="rel-head">
+        <h2 class="label" id="relLabel">Related materials</h2>
+        <p class="hint">Materials from the innovation's family first, then grades sharing at least one application and one format with it, closest in description first.</p>
+      </div>
+      <ul class="results" id="results"></ul>
+      <div class="more-wrap" id="moreWrap" hidden><button type="button" class="more" id="moreBtn">Show more related materials</button></div>
+    </section>
+  </div>
+
+  <footer>Test build of the Spot Material innovation page. Company, availability, ratings and tags are drafts from Airtable until checked.</footer>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+  const SUPABASE_URL = 'https://bjkkqawalpuvsubnbodt.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_ZZN2JFwNHFbBLLjh2DE3cg_4t1YvQ7m';
+  const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const href = (code) => (String(code).startsWith('INN-') ? 'innovation.html' : 'material.html') + '?code=' + encodeURIComponent(code);
+  const SHOW_GRADES = 5, FIRST = 60, ALL = 200;
+
+  // ---- Badges, as on the search page
+  function levelClass(r, higherIsBetter) {
+    if (!r || r.level == null) return 'none';
+    let l = Number(r.level);
+    if (higherIsBetter) l = [0, 6, 5, 3, 2, 1][l] || 1;
+    return 'l' + l;
+  }
+  function badge(name, r, higherIsBetter) {
+    const label = r && r.label ? r.label.toLowerCase() : 'no data';
+    const fam = r && r.source === 'family' ? ' (family value)' : '';
+    return `<span class="badge ${levelClass(r, higherIsBetter)}" title="${esc(name + ': ' + label + fam)}">${esc(name)}: ${esc(label)}</span>`;
+  }
+  const badgesFor = (r) => badge('Cost', r.cost, false) + badge('Carbon', r.carbon, false) + badge('Circularity potential', r.circularity, true);
+
+  function render(d) {
+    document.title = d.name + ' · Spot Material';
+    $('name').textContent = d.name;
+    const img = d.image_path ? SUPABASE_URL + '/storage/v1/object/public/images/' + d.image_path.split('/').map(encodeURIComponent).join('/') : '';
+    $('heroWrap').innerHTML = img ? `<img class="hero" src="${img}" alt="${esc(d.name)}">` : '<div class="hero" role="img" aria-label="No image yet"></div>';
+    $('about').textContent = (d.summary || '').trim() || 'No description yet.';
+
+    // Company name links to its homepage (Airtable "Company website")
+    $('company').innerHTML = d.company
+      ? (d.company_url ? `<a href="${esc(d.company_url)}" target="_blank" rel="noopener">${esc(d.company)}</a>` : esc(d.company))
+      : 'Not recorded';
+    $('checked').innerHTML = d.checked && d.checked_at
+      ? esc(new Date(d.checked_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }))
+      : 'Not checked yet';
+    $('availability').innerHTML = d.availability.length
+      ? esc(d.availability.join(', ')) + (d.checked ? '' : '<span class="draft">Draft</span>')
+      : 'Not recorded';
+    if (d.link) {
+      let host = d.link; try { host = new URL(d.link).hostname.replace(/^www\./, ''); } catch (e) {}
+      $('link').innerHTML = `<a href="${esc(d.link)}" target="_blank" rel="noopener">${esc(host)}</a>`;
+      $('linkWrap').hidden = false;
+    }
+
+    // Family and tags under the description; families link to their material page
+    const tags = [
+      ...d.families.map((f) => `<a class="tag" href="${href(f.code)}">${esc(f.name)}</a>`),
+      ...d.material_types.map((t) => `<span class="tag">${esc(t)}</span>`),
+      ...d.applications.map((t) => `<span class="tag">${esc(t)}</span>`),
+      ...d.formats.map((t) => `<span class="tag">${esc(t)}</span>`),
+    ];
+    $('tags').innerHTML = tags.join('');
+
+    // Ratings: drafted per innovation in Airtable (Cost / Carbon footprint / Circularity potential (draft))
+    const hasRating = [d.cost, d.carbon, d.circularity].some((r) => r && r.level != null);
+    $('ratingsWrap').hidden = !hasRating;
+    if (hasRating) {
+      $('ratings').innerHTML = badgesFor(d);
+      $('ratingsBasis').textContent = 'Draft ratings. ' + (d.ratings_basis || '');
+    }
+
+    $('loading').hidden = true;
+    $('content').hidden = false;
+  }
+
+  // ---- Related materials: tier headings, grades grouped under their family
+  const displayName = (r) => r.kind === 'grade' && r.family_name && !r.name.toLowerCase().startsWith(r.family_name.toLowerCase())
+    ? `${r.family_name} ${r.name}` : r.name;
+  function whyText(r) {
+    if (r.tier === 3) return r.class_label || '';
+    const shared = [...(r.shared_applications || []), ...(r.shared_formats || [])];
+    return shared.length ? 'Shares: ' + shared.join(', ') : (r.class_label || '');
+  }
+  function rowHtml(r, shortName) {
+    const why = whyText(r);
+    return `<div class="row">
+      <div class="r-main">
+        <a class="r-name" href="${href(r.code)}">${esc(shortName ? r.name : displayName(r))}</a>
+        ${why ? `<span class="r-why">${esc(why)}</span>` : ''}
+      </div>
+      ${r.kind === 'family' ? '' : `<div class="badges">${badgesFor(r)}</div>`}
+    </div>`;
+  }
+  function groupedHtml(rows) {
+    const groups = [], byKey = new Map();
+    for (const r of rows) {
+      const key = r.kind === 'grade' && r.family_code ? r.family_code : r.kind === 'family' ? r.code : 'one:' + r.code;
+      let g = byKey.get(key);
+      if (!g) { g = { familyRow: null, grades: [] }; byKey.set(key, g); groups.push(g); }
+      if (r.kind === 'grade') g.grades.push(r); else g.familyRow = r;
+    }
+    return groups.map((g) => {
+      if (g.grades.length + (g.familyRow ? 1 : 0) < 2) return `<li>${rowHtml(g.familyRow || g.grades[0])}</li>`;
+      const first = g.grades[0];
+      const famCode = g.familyRow ? g.familyRow.code : first.family_code;
+      const famName = g.familyRow ? g.familyRow.name : first.family_name;
+      const n = g.grades.length;
+      const grades = g.grades.map((r, i) => `<li${i >= SHOW_GRADES ? ' hidden data-extra' : ''}>${rowHtml(r, true)}</li>`).join('');
+      const more = n > SHOW_GRADES ? `<button type="button" class="link-btn" data-more style="align-self:flex-start; margin-left:24px">Show ${n - SHOW_GRADES} more grade${n - SHOW_GRADES === 1 ? '' : 's'}</button>` : '';
+      return `<li class="fam">
+        <div class="r-main">
+          <a class="r-name" href="${href(famCode)}">${esc(famName)}</a>
+          <span class="fam-sub">Family · ${n} related grade${n === 1 ? '' : 's'}</span>
+        </div>
+        <ul class="grades" aria-label="Grades of ${esc(famName)}">${grades}</ul>${more}
+      </li>`;
+    }).join('');
+  }
+  const TIER = { 1: 'Same material family', 2: 'Same application and format', 3: 'Similar description (no family, application or format match)' };
+
+  async function loadRelated(code, limit) {
+    const { data, error } = await db.rpc('related_materials', { p_code: code, p_limit: limit });
+    if (error) { $('results').innerHTML = `<li class="note error">Could not load related materials: ${esc(error.message)}</li>`; return; }
+    if (!data.length) { $('results').innerHTML = '<li class="note">No related materials found yet.</li>'; $('moreWrap').hidden = true; return; }
+    // One list, no section headings: family matches come first, then application-and-format matches
+    $('results').innerHTML = groupedHtml(data);
+    $('moreWrap').hidden = !(data.length >= limit && limit < ALL);
+    $('moreBtn').onclick = () => loadRelated(code, ALL);
+  }
+
+  async function load(code) {
+    const { data, error } = await db.rpc('get_innovation', { p_code: code });
+    if (error || !data) {
+      $('loading').hidden = true;
+      $('error').hidden = false;
+      $('error').textContent = error ? 'Could not load this innovation: ' + error.message : 'This innovation was not found, or it is still a draft.';
+      return;
+    }
+    render(data);
+    loadRelated(code, FIRST);
+  }
+
+  $('results').addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-more]');
+    if (!btn) return;
+    btn.closest('li.fam').querySelectorAll('[data-extra]').forEach((li) => { li.hidden = false; });
+    btn.remove();
+  });
+
+  if (history.length > 1 && document.referrer && /(search|material)\.html/.test(document.referrer)) {
+    $('back').hidden = false;
+    $('back').addEventListener('click', (e) => { e.preventDefault(); history.back(); });
+  }
+
+  const code = new URLSearchParams(location.search).get('code');
+  if (code) load(code);
+  else { $('loading').hidden = true; $('error').hidden = false; $('error').textContent = 'No innovation chosen. Use the search to pick one.'; }
+</script>
+</body>
+</html>

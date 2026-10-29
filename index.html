@@ -1,0 +1,517 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Spot Material search</title>
+<style>
+  /* Layout: one centred column; search bar, filter rows, then results with badges on the right */
+  :root {
+    --bg: #ffffff; --field: #ececec; --field-hover: #e2e2e2; --chip: #767676; --chip-on: #1f1f1f;
+    --text: #141414; --muted: #6b6b6b; --line: #d6d6d6; --link: #1f1f1f; --focus: #2563eb;
+    --r1: #1e6b34; --r2: #4e7d1e; --r3: #a16207; --r4: #c2410c; --r5: #c62828; --r6: #8e1b1b;
+    --font: "Myriad Pro", "Source Sans 3", "Segoe UI", system-ui, -apple-system, sans-serif;
+  }
+  /* Overall size: 0.68 = everything about a third smaller. Change this one number to scale the page. */
+  html { zoom: 0.68; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--font); font-size: 16px; }
+  a { color: var(--link); }
+  main { max-width: 1120px; margin: 0 auto; padding-block: 48px 72px;
+         padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+         display: flex; flex-direction: column; gap: 36px; }
+  .vh { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+  /* Search bar */
+  form.search { display: flex; align-items: center; gap: 12px; background: var(--field); border-radius: 999px;
+                padding: 6px 8px 6px 8px; min-height: 64px; }
+  .dot { flex: 0 0 48px; height: 48px; border-radius: 50%; background: #9b9b9b; }
+  a.dot { display: block; cursor: pointer; }
+  a.dot:hover { background: #7a7a7a; }
+  form.search input { flex: 1 1 auto; min-width: 0; border: 0; background: transparent; font: inherit; font-size: 24px;
+                      color: var(--text); padding: 8px 4px; }
+  form.search input::placeholder { color: #8c8c8c; }
+  form.search input:focus { outline: none; }
+  form.search:focus-within { box-shadow: 0 0 0 2px var(--focus); }
+  .go { flex: 0 0 48px; height: 48px; border: 0; border-radius: 50%; background: transparent; color: #8c8c8c; cursor: pointer;
+        display: inline-flex; align-items: center; justify-content: center; }
+  .go:hover { color: var(--text); }
+
+  /* Filter rows */
+  .group { display: flex; flex-direction: column; gap: 12px; }
+  .group-label { margin: 0; font-size: 18px; color: var(--muted); font-weight: 400; }
+  .selects { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 16px 24px; }
+  select { appearance: none; -webkit-appearance: none; width: 100%; height: 56px; border: 0; border-radius: 999px;
+           background: var(--field) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='22' height='22' viewBox='0 0 24 24' fill='none' stroke='%237a7a7a' stroke-width='1.6'%3E%3Cpath d='M5 9l7 7 7-7'/%3E%3C/svg%3E") no-repeat right 22px center;
+           padding: 0 52px 0 26px; font: inherit; font-size: 18px; color: #6f6f6f; cursor: pointer; text-overflow: ellipsis; }
+  select:hover { background-color: var(--field-hover); }
+  select.set { color: var(--text); }
+  /* Chips size to their words (e.g. "Bio-based plastic") and stretch to fill the row */
+  .chips { display: flex; flex-wrap: wrap; gap: 16px 24px; }
+  .chips .chip { flex: 1 1 auto; min-width: 150px; overflow: visible; }
+  .chip { height: 56px; padding: 0 22px; border: 0; border-radius: 999px; background: var(--chip); color: #fff; font: inherit;
+          font-size: 18px; text-align: left; cursor: pointer; display: flex; align-items: center; gap: 8px;
+          white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-decoration: none; }
+  .chip:hover { background: #5f5f5f; }
+  .chip[aria-pressed="true"] { background: var(--chip-on); }
+  .chip[aria-pressed="true"]::after { content: ""; width: 14px; height: 8px; margin-left: auto; flex: 0 0 auto;
+          border-left: 2px solid #fff; border-bottom: 2px solid #fff; transform: rotate(-45deg) translateY(-2px); }
+  .chip[disabled] { background: #bdbdbd; cursor: not-allowed; }
+  .chip .x { margin-left: auto; }
+  .extra-chips { display: flex; flex-wrap: wrap; gap: 12px; }
+  .extra-chips .chip { background: var(--chip-on); }
+  .hint { margin: 0; font-size: 14px; color: var(--muted); }
+
+  /* Exclude concerns */
+  details.exclude { background: var(--field); border-radius: 28px; }
+  details.exclude summary { list-style: none; min-height: 56px; padding: 14px 52px 14px 26px; font-size: 18px; color: #6f6f6f; cursor: pointer;
+          background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='22' height='22' viewBox='0 0 24 24' fill='none' stroke='%237a7a7a' stroke-width='1.6'%3E%3Cpath d='M5 9l7 7 7-7'/%3E%3C/svg%3E") no-repeat right 22px center; }
+  details.exclude summary::-webkit-details-marker { display: none; }
+  details.exclude[open] summary { border-bottom: 1px solid var(--line); }
+  details.exclude summary.set { color: var(--text); }
+  .concerns { margin: 0; padding: 12px 26px 20px; border: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 4px 24px; }
+  .concerns label { display: flex; align-items: center; gap: 10px; min-height: 40px; font-size: 16px; cursor: pointer; }
+  .concerns input { width: 18px; height: 18px; accent-color: var(--chip-on); }
+  .concerns .n { color: var(--muted); font-size: 14px; }
+
+  /* Results */
+  .results-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 8px 24px;
+                  padding-top: 12px; }
+  .results-head h2 { margin: 0; font-size: 28px; font-weight: 400; font-variant-numeric: tabular-nums; }
+  .link-btn { background: none; border: 0; padding: 8px 0; font: inherit; font-size: 15px; color: var(--muted);
+              text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+  .link-btn:hover { color: var(--text); }
+  ul.results { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+  .row { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 10px 32px; padding: 22px 0;
+         border-bottom: 1px solid var(--line); }
+  .r-main { flex: 1 1 320px; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+  .r-name { font-size: 28px; line-height: 1.15; color: var(--text); text-decoration: none; }
+  .r-name:hover { text-decoration: underline; text-underline-offset: 4px; }
+  .r-why { font-size: 18px; color: #8a8a8a; }
+  .badges { display: flex; flex-wrap: wrap; gap: 10px 16px; padding-top: 6px; }
+  .badge { min-width: 170px; padding: 4px 8px; border-radius: 3px; color: #fff; font-size: 15px; line-height: 1.3; white-space: nowrap; }
+  .badge.none { background: transparent; color: var(--muted); box-shadow: inset 0 0 0 1px var(--line); }
+  .l1 { background: var(--r1); } .l2 { background: var(--r2); } .l3 { background: var(--r3); }
+  .l4 { background: var(--r4); } .l5 { background: var(--r5); } .l6 { background: var(--r6); }
+
+  li.fam { padding: 22px 0 8px; border-bottom: 1px solid var(--line); display: flex; flex-direction: column; }
+  .fam-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px 32px; align-items: flex-start; }
+  .fam-sub { font-size: 15px; color: var(--muted); }
+  ul.grades { list-style: none; margin: 8px 0 0; padding: 0 0 0 24px; }
+  ul.grades .row { padding: 14px 0; border-bottom: 0; border-top: 1px solid #ededed; }
+  ul.grades .r-name { font-size: 22px; }
+  ul.grades .r-why { font-size: 16px; }
+  ul.grades li[hidden] { display: none; }
+
+  .better-banner { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px 24px;
+                   padding: 16px 24px; background: var(--chip-on); color: #fff; border-radius: 16px; font-size: 18px; }
+  .better-banner .link-btn { color: #e6e6e6; }
+  .better-banner .link-btn:hover { color: #fff; }
+  li.tier { padding: 28px 0 4px; font-size: 18px; color: var(--muted); border-bottom: 1px solid var(--line); }
+  li.tier:first-child { padding-top: 4px; }
+  .r-val { font-size: 16px; color: #3d3d3d; font-variant-numeric: tabular-nums; }
+  .note { margin: 0; padding: 16px 20px; background: var(--field); border-radius: 12px; font-size: 16px; color: #3d3d3d; }
+  .note.error { background: #fdecec; color: #8e1b1b; }
+  .more-wrap { display: flex; justify-content: center; padding-top: 8px; }
+  .more { height: 48px; padding: 0 28px; border: 0; border-radius: 999px; background: var(--field); font: inherit; font-size: 16px; cursor: pointer; }
+  .more:hover { background: var(--field-hover); }
+  footer { font-size: 14px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 16px; line-height: 1.5; }
+
+  @media (max-width: 560px) {
+    form.search input { font-size: 19px; }
+    .dot { flex-basis: 36px; height: 36px; }
+    .r-name { font-size: 23px; }
+    .badge { min-width: 0; }
+    ul.grades { padding-left: 12px; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <form class="search" id="searchForm" role="search">
+    <a class="dot" href="search.html" title="Home: new search" aria-label="Home: start a new search"></a>
+    <label for="q" class="vh">Search materials</label>
+    <input id="q" type="search" placeholder="Search query here" autocomplete="off">
+    <button class="go" type="submit" aria-label="Search">
+      <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"></circle><path d="M20 20l-4.8-4.8"></path></svg>
+    </button>
+  </form>
+
+  <section class="group" aria-labelledby="filterLabel">
+    <h2 class="group-label" id="filterLabel">Apply a filter</h2>
+    <div class="selects">
+      <select id="f_eol" data-vocab="circularity_opportunity" data-prefix="End of life" aria-label="End of life"></select>
+      <select id="f_type" data-vocab="material_class" data-prefix="Type" aria-label="Type"></select>
+      <select id="f_format" data-vocab="format" data-prefix="Format" aria-label="Format"></select>
+      <select id="f_application" data-vocab="application" data-prefix="Application" aria-label="Application"></select>
+      <select id="f_process" data-vocab="process" data-prefix="Manufacture" aria-label="Manufacture"></select>
+    </div>
+  </section>
+
+  <section class="group" aria-labelledby="chipsLabel">
+    <h2 class="group-label" id="chipsLabel">Narrow your search</h2>
+    <div class="chips" id="chips"></div>
+    <div class="extra-chips" id="extraChips" hidden></div>
+  </section>
+
+  <section class="group" aria-labelledby="excludeLabel">
+    <h2 class="group-label" id="excludeLabel">Remove sustainability concerns</h2>
+    <details class="exclude" id="exclude">
+      <summary id="excludeSummary">Exclude materials</summary>
+      <fieldset class="concerns" id="concerns"><legend class="vh">Leave out materials with these concerns</legend></fieldset>
+    </details>
+  </section>
+
+  <section class="group" aria-label="Results">
+    <div class="better-banner" id="betterBanner" hidden>
+      <span id="betterText"></span>
+      <button type="button" class="link-btn" id="betterClear">Back to normal search</button>
+    </div>
+    <div class="results-head" id="resultsHead">
+      <h2 id="count" aria-live="polite">Loading…</h2>
+      <span style="display:flex; gap:24px; flex-wrap:wrap">
+        <button type="button" class="link-btn" id="groupBtn" aria-pressed="true">Grouped by family</button>
+        <button type="button" class="link-btn" id="clearBtn">Clear all</button>
+      </span>
+    </div>
+    <p class="note error" id="error" hidden></p>
+    <p class="note" id="empty" hidden>No materials match all of these. Try fewer words, or remove a filter or a concern.</p>
+    <ul class="results" id="results"></ul>
+    <div class="more-wrap" id="moreWrap" hidden><button type="button" class="more" id="moreBtn">Show 50 more</button></div>
+  </section>
+
+  <footer>
+    Test build. Published records only. Typed searches combine keyword and meaning search
+    ("meaning" in What matches = found by the gte-small model rather than by the words). Cost, carbon and energy ratings use provisional thresholds
+    (carbon and energy fitted to the hand-set Airtable bands, cost split into six equal groups);
+    circularity potential is the editors' family rating. Filters and chips are set on grades, so
+    families and innovations drop out once one is chosen.
+  </footer>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+  const SUPABASE_URL = 'https://bjkkqawalpuvsubnbodt.supabase.co';
+  // Publishable key: made to sit in web pages. It can only run the read-only search and material functions.
+  const SUPABASE_KEY = 'sb_publishable_ZZN2JFwNHFbBLLjh2DE3cg_4t1YvQ7m';
+  const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  // "Narrow your search" chips: each is one vocabulary:slug term. Regenerative has no data yet.
+  const CHIPS = [
+    ['attribute:recycled', 'Recycled'], ['attribute:renewable', 'Renewable'], ['attribute:bio-based-plastic', 'Bio-based plastic'],
+    ['attribute:healthy', 'Healthy'], ['attribute:plastic-free', 'Plastic free'], [null, 'Regenerative']
+  ];
+  // Find better options (rules are in the database table find_better_options; labels repeated here for the banner)
+  const BETTER_LABELS = {
+    reduce_carbon: 'Reduce carbon', plastic_free: 'Plastic free', healthy: 'Healthy', renewable: 'Renewable',
+    circular: 'Circular', recyclable: 'Recyclable', lighter: 'Lighter', strength_to_weight: 'Higher strength-to-weight',
+    stiffer: 'Stiffer', animal_free: 'Animal free', non_polluting: 'Non-polluting'
+  };
+  const TIERS = { 1: 'Same material', 2: 'Same type', 3: 'Shares a use (Explore similar)', 4: 'Other matches' };
+  const SELECTS = ['f_eol', 'f_type', 'f_format', 'f_application', 'f_process'];
+  const STEP = 50, MAX = 200, SHOW_GRADES = 5;
+
+  const $ = (id) => document.getElementById(id);
+  const state = { terms: [], exclude: new Set(), grouped: true, limit: STEP, data: [], labels: {} };
+
+  const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+  // ---- Ratings -> coloured badge. Six bands; for cost and carbon higher is worse, for circularity higher is better.
+  function levelClass(r, higherIsBetter) {
+    if (!r || r.level == null) return 'none';
+    let l = Number(r.level);
+    if (higherIsBetter) l = [0, 6, 5, 3, 2, 1][l] || 1;   // circularity: 5 levels, 5 = best
+    return 'l' + l;
+  }
+  function badge(name, r, higherIsBetter) {
+    const cls = levelClass(r, higherIsBetter);
+    const label = r && r.label ? r.label.toLowerCase() : 'no data';
+    const fam = r && r.source === 'family' ? ' (family value)' : '';
+    return `<span class="badge ${cls}" title="${esc(name + ': ' + label + fam)}">${esc(name)}: ${esc(label)}</span>`;
+  }
+  const badgesFor = (r) => badge('Cost', r.cost, false) + badge('Carbon', r.carbon, false) + badge('Circularity potential', r.circularity, true);
+
+  // ---- Terms: which ones belong to a dropdown, a chip, or are "extra" (e.g. from Explore similar)
+  const vocabOf = (t) => t.split(':')[0];
+  function selectFor(term) { return SELECTS.find((id) => $(id).dataset.vocab === vocabOf(term) && [...$(id).options].some((o) => o.value === term)); }
+  function chipFor(term) { return CHIPS.find((c) => c[0] === term); }
+
+  function syncControls() {
+    const used = new Set();
+    for (const id of SELECTS) {
+      const sel = $(id);
+      const t = state.terms.find((x) => vocabOf(x) === sel.dataset.vocab && !chipFor(x) && !used.has(x) &&
+                                         [...sel.options].some((o) => o.value === x));
+      sel.value = t || '';
+      sel.classList.toggle('set', !!t);
+      if (t) used.add(t);
+    }
+    document.querySelectorAll('#chips .chip[data-term]').forEach((b) => {
+      b.setAttribute('aria-pressed', String(state.terms.includes(b.dataset.term)));
+    });
+    const extras = state.terms.filter((t) => !used.has(t) && !chipFor(t));
+    $('extraChips').hidden = !extras.length;
+    $('extraChips').innerHTML = extras.map((t) =>
+      `<button type="button" class="chip" data-remove="${esc(t)}" aria-label="Remove ${esc(state.labels[t] || t)}">${esc(state.labels[t] || t)}<span class="x" aria-hidden="true">✕</span></button>`).join('');
+    document.querySelectorAll('#concerns input').forEach((i) => { i.checked = state.exclude.has(i.value); });
+    const ex = [...state.exclude].map((s) => state.labels['circularity_concern:' + s] || s);
+    $('excludeSummary').textContent = ex.length ? 'Excluding: ' + ex.join(', ') : 'Exclude materials';
+    $('excludeSummary').classList.toggle('set', ex.length > 0);
+  }
+
+  async function loadOptions() {
+    const { data, error } = await db.rpc('filter_options_v2');
+    if (error) throw error;
+    const by = {};
+    for (const o of data) {
+      (by[o.vocabulary] ||= []).push(o);
+      state.labels[o.vocabulary + ':' + o.slug] = o.label;
+    }
+    for (const id of SELECTS) {
+      const sel = $(id);
+      const prefix = sel.dataset.prefix;
+      sel.innerHTML = `<option value="">${esc(prefix)}: any</option>` +
+        (by[sel.dataset.vocab] || []).map((o) => `<option value="${esc(sel.dataset.vocab + ':' + o.slug)}">${esc(prefix)}: ${esc(o.label)} (${o.n})</option>`).join('');
+    }
+    const count = (term) => { const [v, s] = term.split(':'); return (by[v] || []).find((o) => o.slug === s)?.n; };
+    $('chips').innerHTML = CHIPS.map(([term, label]) => term
+      ? `<button type="button" class="chip" data-term="${esc(term)}" aria-pressed="false" title="${count(term) ?? 0} materials">${esc(label)}</button>`
+      : `<button type="button" class="chip" disabled title="No data for this yet">${esc(label)}</button>`).join('');
+    $('concerns').insertAdjacentHTML('beforeend', (by.circularity_concern || []).map((o) =>
+      `<label><input type="checkbox" value="${esc(o.slug)}"> ${esc(o.label)} <span class="n">(${o.n})</span></label>`).join(''));
+  }
+
+  // ---- Address keeps the search, so Back from a material returns to it
+  function readUrl() {
+    const p = new URLSearchParams(location.search);
+    $('q').value = p.get('q') || '';
+    state.terms = (p.get('t') || '').split(',').filter(Boolean);
+    state.exclude = new Set((p.get('x') || '').split(',').filter(Boolean));
+    state.grouped = p.get('view') !== 'list';
+    state.limit = Math.min(MAX, Math.max(STEP, parseInt(p.get('n'), 10) || STEP));
+    state.better = p.get('better') && p.get('than')
+      ? { option: p.get('better'), code: p.get('than'), name: p.get('thanName') || p.get('than') } : null;
+  }
+  function writeUrl() {
+    const p = new URLSearchParams();
+    const q = $('q').value.trim();
+    if (q) p.set('q', q);
+    if (state.terms.length) p.set('t', state.terms.join(','));
+    if (state.exclude.size) p.set('x', [...state.exclude].join(','));
+    if (!state.grouped) p.set('view', 'list');
+    if (state.limit > STEP) p.set('n', state.limit);
+    if (state.better) { p.set('better', state.better.option); p.set('than', state.better.code); p.set('thanName', state.better.name); }
+    try { history.replaceState(null, '', (p.toString() ? '?' + p : location.pathname)); } catch (e) { /* file:// may refuse */ }
+  }
+
+  let seq = 0;
+  async function runSearch() {
+    const mine = ++seq;
+    syncControls();
+    writeUrl();
+    const b = state.better;
+    // Nothing asked yet (no words, filters, chips, concerns or Find better): show no results
+    if (!b && !$('q').value.trim() && !state.terms.length && !state.exclude.size) {
+      state.data = [];
+      $('betterBanner').hidden = true;
+      $('count').textContent = '';
+      $('error').hidden = true;
+      $('empty').hidden = true;
+      $('moreWrap').hidden = true;
+      $('results').innerHTML = '';
+      $('resultsHead').hidden = true;
+      return;
+    }
+    $('resultsHead').hidden = false;
+    $('count').textContent = 'Searching…';
+    $('betterBanner').hidden = !b;
+    const common = { q: $('q').value.trim(), p_terms: state.terms, p_exclude: [...state.exclude], p_limit: state.limit };
+    let data, error;
+    if (b) {
+      $('betterText').textContent = `Find better: ${BETTER_LABELS[b.option] || b.option} than ${b.name}`;
+      ({ data, error } = await db.rpc('find_better_v2', { p_code: b.code, p_option: b.option, ...common }));
+    } else {
+      if (common.q) {
+        // Words typed: keyword + meaning search, through the Edge Function that turns the words into a vector
+        const res = await db.functions.invoke('search', {
+          body: { q: common.q, terms: common.p_terms, exclude: common.p_exclude, limit: common.p_limit }
+        });
+        if (res.error) {
+          let msg = res.error.message;
+          try { const body = await res.error.context.json(); if (body && body.error) msg = body.error; } catch (e) { /* keep message */ }
+          error = { message: msg };
+        } else {
+          data = (res.data && res.data.rows) || [];
+        }
+      } else {
+        // Filters only: no words to read for meaning
+        ({ data, error } = await db.rpc('search_materials_v2', common));
+      }
+    }
+    if (mine !== seq) return;
+    $('error').hidden = !error;
+    if (error) {
+      $('error').textContent = 'Search failed: ' + error.message;
+      $('count').textContent = '';
+      $('results').innerHTML = '';
+      $('moreWrap').hidden = true;
+      return;
+    }
+    state.data = data;
+    const total = data.length ? Number(data[0].total) : 0;
+    const noun = b ? 'alternative' : 'result';
+    $('count').textContent = total === 0 ? (b ? 'No alternatives' : 'No results')
+      : `${total} ${noun}${total === 1 ? '' : 's'}` + (total > data.length ? ` (showing best ${data.length})` : '');
+    $('empty').hidden = total !== 0;
+    $('moreWrap').hidden = !(total > data.length && state.limit < MAX);
+    $('moreBtn').textContent = `Show ${Math.min(STEP, total - data.length, MAX - state.limit)} more`;
+    render();
+  }
+
+  // ---- What matched: the words, plus the chips and extra terms (all of which every result carries)
+  function whatMatches(r) {
+    const parts = [];
+    if (r.match_reason === 'Name') parts.push('name');
+    else if (r.match_reason === 'Meaning') parts.push('meaning');
+    else if (r.match_reason) parts.push(r.match_reason.replace(/^Words: /, 'words ').replace(' + meaning', ', meaning'));
+    const termLabels = state.terms.filter((t) => chipFor(t) || !selectFor(t)).map((t) => state.labels[t] || t);
+    parts.push(...termLabels);
+    if (r.supply_route === 'recycled' && !state.terms.includes('attribute:recycled')) parts.push('recycled version');
+    return parts.length ? 'What matches: ' + parts.join(', ') : (r.class_label ? r.class_label : '');
+  }
+  // Innovations (codes INN-…) open the innovation page, everything else the material page
+  const href = (code) => (String(code).startsWith('INN-') ? 'innovation.html' : 'material.html') + '?code=' + encodeURIComponent(code);
+  // "Aluminium 6061"; a grade already named after its family ("Oak", "Aluminium alloy") isn't repeated
+  const displayName = (r) => r.kind === 'grade' && r.family_name && !r.name.toLowerCase().startsWith(r.family_name.toLowerCase())
+    ? `${r.family_name} ${r.name}` : r.name;
+
+  function rowHtml(r, shortName) {
+    return `<div class="row">
+      <div class="r-main">
+        <a class="r-name" href="${href(r.code)}">${esc(shortName ? r.name : displayName(r))}</a>
+        <span class="r-why">${esc(whatMatches(r))}</span>
+      </div>
+      ${r.kind === 'family' ? '' : `<div class="badges">${badgesFor(r)}</div>`}
+    </div>`;
+  }
+
+  // Find better rows: show the improvement and the shared uses instead of "What matches"
+  function betterRowHtml(r, shortName) {
+    const fmt = (n) => String(+Number(n).toPrecision(3));
+    const val = r.value != null ? `${fmt(r.value)} ${r.unit || ''} (this one: ${fmt(r.baseline_value)})` : '';
+    const why = r.shared_reasons && r.shared_reasons.length ? 'Shares: ' + r.shared_reasons.join(', ') : (r.class_label || '');
+    return `<div class="row">
+      <div class="r-main">
+        <a class="r-name" href="${href(r.code)}">${esc(shortName ? r.name : displayName(r))}</a>
+        ${val ? `<span class="r-val">${esc(val)}</span>` : ''}
+        ${why ? `<span class="r-why">${esc(why)}</span>` : ''}
+      </div>
+      ${r.kind === 'family' ? '' : `<div class="badges">${badgesFor(r)}</div>`}
+    </div>`;
+  }
+
+  // Grades of the same family gathered under one family heading, placed where the family's best
+  // result ranked; a grade alone, a family alone or an innovation stays a single row.
+  function groupedHtml(rows, rowFn) {
+    if (!state.grouped) return rows.map((r) => `<li>${rowFn(r)}</li>`).join('');
+    const groups = [], byKey = new Map();
+    for (const r of rows) {
+      const key = r.kind === 'grade' && r.family_code ? r.family_code : r.kind === 'family' ? r.code : 'one:' + r.code;
+      let g = byKey.get(key);
+      if (!g) { g = { familyRow: null, grades: [], single: null }; byKey.set(key, g); groups.push(g); }
+      if (r.kind === 'grade') g.grades.push(r); else if (r.kind === 'family') g.familyRow = r; else g.single = r;
+    }
+    return groups.map((g) => {
+      if (g.single) return `<li>${rowFn(g.single)}</li>`;
+      if (g.grades.length + (g.familyRow ? 1 : 0) < 2) return `<li>${rowFn(g.familyRow || g.grades[0])}</li>`;
+      const first = g.grades[0];
+      const famCode = g.familyRow ? g.familyRow.code : first.family_code;
+      const famName = g.familyRow ? g.familyRow.name : first.family_name;
+      const n = g.grades.length;
+      const noun = state.better ? 'alternative grade' : 'matching grade';
+      const grades = g.grades.map((r, i) => `<li${i >= SHOW_GRADES ? ' hidden data-extra' : ''}>${rowFn(r, true)}</li>`).join('');
+      const more = n > SHOW_GRADES ? `<button type="button" class="link-btn" data-more style="align-self:flex-start; margin-left:24px">Show ${n - SHOW_GRADES} more grade${n - SHOW_GRADES === 1 ? '' : 's'}</button>` : '';
+      return `<li class="fam">
+        <div class="fam-head">
+          <div class="r-main">
+            <a class="r-name" href="${href(famCode)}">${esc(famName)}</a>
+            <span class="fam-sub">Family · ${n} ${noun}${n === 1 ? '' : 's'}${g.familyRow ? ' · ' + esc(whatMatches(g.familyRow)) : ''}</span>
+          </div>
+        </div>
+        <ul class="grades" aria-label="Grades of ${esc(famName)}">${grades}</ul>${more}
+      </li>`;
+    }).join('');
+  }
+
+  function render() {
+    const data = state.data;
+    $('groupBtn').setAttribute('aria-pressed', String(state.grouped));
+    $('groupBtn').textContent = state.grouped ? 'Grouped by family' : 'Group by family';
+    if (state.better) {
+      // Tier headings (same material, same type, shares a use, others), grouped by family within each tier
+      const tiers = [];
+      for (const r of data) {
+        if (!tiers.length || tiers[tiers.length - 1].tier !== r.tier) tiers.push({ tier: r.tier, rows: [] });
+        tiers[tiers.length - 1].rows.push(r);
+      }
+      $('results').innerHTML = tiers.map((t) =>
+        `<li class="tier"><h3 style="margin:0; font: inherit">${esc(TIERS[t.tier] || '')}</h3></li>` +
+        groupedHtml(t.rows, betterRowHtml)).join('');
+      return;
+    }
+    $('results').innerHTML = groupedHtml(data, rowHtml);
+  }
+
+  // ---- Events
+  const restart = () => { state.limit = STEP; runSearch(); };
+  $('searchForm').addEventListener('submit', (e) => { e.preventDefault(); restart(); });
+  for (const id of SELECTS) {
+    $(id).addEventListener('change', (e) => {
+      const vocab = e.target.dataset.vocab;
+      // replace this dropdown's term, keep chips and extra terms of the same vocabulary
+      const prev = state.terms.find((t) => vocabOf(t) === vocab && !chipFor(t) && [...e.target.options].some((o) => o.value === t));
+      state.terms = state.terms.filter((t) => t !== prev);
+      if (e.target.value) state.terms.push(e.target.value);
+      restart();
+    });
+  }
+  $('chips').addEventListener('click', (e) => {
+    const b = e.target.closest('.chip[data-term]');
+    if (!b) return;
+    const t = b.dataset.term;
+    state.terms = state.terms.includes(t) ? state.terms.filter((x) => x !== t) : [...state.terms, t];
+    restart();
+  });
+  $('extraChips').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-remove]');
+    if (!b) return;
+    state.terms = state.terms.filter((x) => x !== b.dataset.remove);
+    restart();
+  });
+  $('concerns').addEventListener('change', (e) => {
+    if (e.target.checked) state.exclude.add(e.target.value); else state.exclude.delete(e.target.value);
+    restart();
+  });
+  $('betterClear').addEventListener('click', () => { state.better = null; restart(); });
+  $('groupBtn').addEventListener('click', () => { state.grouped = !state.grouped; writeUrl(); render(); });
+  $('clearBtn').addEventListener('click', () => {
+    $('q').value = ''; state.terms = []; state.exclude.clear(); $('exclude').open = false; restart();
+  });
+  $('moreBtn').addEventListener('click', () => { state.limit = Math.min(MAX, state.limit + STEP); runSearch(); });
+  $('results').addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-more]');
+    if (!btn) return;
+    btn.closest('li.fam').querySelectorAll('[data-extra]').forEach((li) => { li.hidden = false; });
+    btn.remove();
+  });
+
+  readUrl();
+  loadOptions().then(runSearch).catch((e) => {
+    $('error').hidden = false;
+    $('error').textContent = 'Could not reach the database: ' + (e.message || e);
+    $('count').textContent = '';
+  });
+</script>
+</body>
+</html>

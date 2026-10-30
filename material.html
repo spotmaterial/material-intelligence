@@ -281,8 +281,11 @@
 
   function render(d) {
     const fam = d.family, item = d.item, terms = item.terms || {};
-    const title = fam && item.kind === 'grade' && !item.name.toLowerCase().startsWith(fam.name.toLowerCase())
+    let title = fam && item.kind === 'grade' && !item.name.toLowerCase().startsWith(fam.name.toLowerCase())
       ? `${fam.name} ${item.name}` : item.name;
+    // Sub-family after the grade name when the name doesn't say it, e.g. "... Polyethylene terephthalate (Foam)"
+    const sub = item.kind === 'grade' && item.subfamily ? String(item.subfamily).trim() : '';
+    if (sub && !title.toLowerCase().includes(sub.toLowerCase())) title += ` (${sub})`;
     document.title = title + ' · Spot Material';
     $('name').textContent = title;
     $('kindLabel').textContent = item.kind === 'innovation' ? 'Innovation' : 'Material';
@@ -297,6 +300,15 @@
     const grades = fam ? fam.grades : [];
     $('gradeWrap').hidden = grades.length < 2;
     $('grade').innerHTML = grades.map((g) => `<option value="${esc(g.code)}"${g.code === item.code ? ' selected' : ''}>Grade: ${esc(g.name)}${g.supply_route === 'recycled' ? ' (recycled)' : ''}</option>`).join('');
+    // Add each grade's sub-family to the picker when its name doesn't say it
+    if (grades.length > 1) db.rpc('material_subfamilies', { p_codes: grades.map((g) => g.code) }).then(({ data }) => {
+      const subs = new Map((data || []).map((x) => [x.code, x.subfamily]));
+      for (const o of $('grade').options) {
+        const g = grades.find((x) => x.code === o.value), sf = g && subs.get(g.code);
+        if (sf && !g.name.toLowerCase().includes(sf.toLowerCase()) && !(sf.toLowerCase() === 'recycled' && g.supply_route === 'recycled'))
+          o.textContent = `Grade: ${g.name} (${sf})${g.supply_route === 'recycled' && sf.toLowerCase() !== 'recycled' ? ' (recycled)' : ''}`;
+      }
+    }).catch(() => {});
 
     // Ratings (grade level, family value where the grade has none)
     $('ratings').innerHTML = (item.ratings || []).map((r) => `

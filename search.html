@@ -366,6 +366,7 @@
       return;
     }
     try { await loadCompanies(data); } catch (e) { /* labels fall back to "company product" */ }
+    try { await loadSubfamilies(data); } catch (e) { /* names without sub-family */ }
     if (mine !== seq) return;
     state.data = data;
     const total = data.length ? Number(data[0].total) : 0;
@@ -395,6 +396,22 @@
   const displayName = (r) => r.kind === 'grade' && r.family_name && !r.name.toLowerCase().startsWith(r.family_name.toLowerCase())
     ? `${r.family_name} ${r.name}` : r.name;
 
+  // Sub-family after the grade name when the name doesn't say it, e.g. "Thermoplastic polyester Polyethylene terephthalate (Foam)"
+  const subfamilies = new Map();
+  const withSub = (r, s) => {
+    const sub = r.kind === 'grade' ? subfamilies.get(r.code) : null;
+    if (!sub) return s;
+    const low = sub.toLowerCase();
+    return s.toLowerCase().includes(low) || String(r.family_name || '').toLowerCase().includes(low) ? s : `${s} (${sub})`;
+  };
+  async function loadSubfamilies(rows) {
+    const codes = [...new Set(rows.filter((r) => r.kind === 'grade' && !subfamilies.has(r.code)).map((r) => r.code))];
+    if (!codes.length) return;
+    const { data } = await db.rpc('material_subfamilies', { p_codes: codes });
+    codes.forEach((c) => subfamilies.set(c, null));
+    (data || []).forEach((x) => subfamilies.set(x.code, x.subfamily));
+  }
+
   // Label saying where the link goes. Grades listed under a family heading don't repeat it (the heading has it).
   const companies = new Map();
   function kindTag(r) {
@@ -418,7 +435,7 @@
     return `<div class="row">
       <div class="r-main">
         ${shortName ? '' : kindTag(r)}
-        <a class="r-name" href="${href(r.code)}">${esc(shortName ? r.name : displayName(r))}</a>
+        <a class="r-name" href="${href(r.code)}">${esc(withSub(r, shortName ? r.name : displayName(r)))}</a>
         <span class="r-why">${esc(whatMatches(r))}</span>
       </div>
       ${r.kind === 'family' ? '' : `<div class="badges">${badgesFor(r)}</div>`}
@@ -433,7 +450,7 @@
     return `<div class="row">
       <div class="r-main">
         ${shortName ? '' : kindTag(r)}
-        <a class="r-name" href="${href(r.code)}">${esc(shortName ? r.name : displayName(r))}</a>
+        <a class="r-name" href="${href(r.code)}">${esc(withSub(r, shortName ? r.name : displayName(r)))}</a>
         ${val ? `<span class="r-val">${esc(val)}</span>` : ''}
         ${why ? `<span class="r-why">${esc(why)}</span>` : ''}
       </div>

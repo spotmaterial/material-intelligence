@@ -239,6 +239,21 @@
   // ---- Related materials: tier headings, grades grouped under their family
   const displayName = (r) => r.kind === 'grade' && r.family_name && !r.name.toLowerCase().startsWith(r.family_name.toLowerCase())
     ? `${r.family_name} ${r.name}` : r.name;
+  // Sub-family after the grade name when the name doesn't say it, e.g. "Thermoplastic polyester Polyethylene terephthalate (Foam)"
+  const subfamilies = new Map();
+  const withSub = (r, s) => {
+    const sub = r.kind === 'grade' ? subfamilies.get(r.code) : null;
+    if (!sub) return s;
+    const low = sub.toLowerCase();
+    return s.toLowerCase().includes(low) || String(r.family_name || '').toLowerCase().includes(low) ? s : `${s} (${sub})`;
+  };
+  async function loadSubfamilies(rows) {
+    const codes = [...new Set(rows.filter((r) => r.kind === 'grade' && !subfamilies.has(r.code)).map((r) => r.code))];
+    if (!codes.length) return;
+    const { data } = await db.rpc('material_subfamilies', { p_codes: codes });
+    codes.forEach((c) => subfamilies.set(c, null));
+    (data || []).forEach((x) => subfamilies.set(x.code, x.subfamily));
+  }
   function whyText(r) {
     if (r.tier === 3) return r.class_label || '';
     const shared = [...(r.shared_applications || []), ...(r.shared_formats || [])];
@@ -248,7 +263,7 @@
     const why = whyText(r);
     return `<div class="row">
       <div class="r-main">
-        <a class="r-name" href="${href(r.code)}">${esc(shortName ? r.name : displayName(r))}</a>
+        <a class="r-name" href="${href(r.code)}">${esc(withSub(r, shortName ? r.name : displayName(r)))}</a>
         ${why ? `<span class="r-why">${esc(why)}</span>` : ''}
       </div>
       ${r.kind === 'family' ? '' : `<div class="badges">${badgesFor(r)}</div>`}
@@ -285,6 +300,7 @@
     const { data, error } = await db.rpc('related_materials', { p_code: code, p_limit: limit });
     if (error) { $('results').innerHTML = `<li class="note error">Could not load related materials: ${esc(error.message)}</li>`; return; }
     if (!data.length) { $('results').innerHTML = '<li class="note">No related materials found yet.</li>'; $('moreWrap').hidden = true; return; }
+    try { await loadSubfamilies(data); } catch (e) { /* names without sub-family */ }
     // One list, no section headings: family matches come first, then application-and-format matches
     $('results').innerHTML = groupedHtml(data);
     $('moreWrap').hidden = !(data.length >= limit && limit < ALL);

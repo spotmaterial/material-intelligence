@@ -99,6 +99,11 @@
   .innov-list a:hover, .innov-list a:focus-visible { text-decoration: underline; text-underline-offset: 3px; }
   .innov-why { font-size: 13px; color: var(--muted); }
   .innov-why.named { color: #1e6b34; }
+  /* Label saying what the card is, as in search results: a company's innovation, or one not yet on sale */
+  .kind-tag { align-self: flex-start; padding: 2px 10px; border-radius: 999px; font-size: 13px; line-height: 1.4; color: #fff;
+              white-space: nowrap; max-width: calc(100% - 36px); overflow: hidden; text-overflow: ellipsis; }
+  .kind-tag.inn { background: #3b4a8f; }
+  .kind-tag.dev { background: #9a5b13; }
   .innov-snip { margin: 0; font-size: 15px; line-height: 1.4; color: #3d3d3d;
                 display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
   .more-btn { align-self: flex-start; height: 44px; padding: 0 22px; border: 0; border-radius: 999px; background: var(--field);
@@ -397,11 +402,24 @@
     const { data, error } = await db.rpc('related_innovations', { p_code: code, p_limit: limit });
     if (error || !data || !data.length) { $('innovations').hidden = true; return; }
     const imgBase = SUPABASE_URL + '/storage/v1/object/public/images/';
+    // Company and "In development" (Spotlight Availability) for the labels; cards still show if this fails
+    const info = new Map();
+    try {
+      const res = await db.rpc('innovation_companies', { p_codes: data.map((r) => r.code) });
+      (res.data || []).forEach((x) => info.set(x.code, x));
+    } catch (e) { /* labels fall back to "company product" */ }
+    const tag = (r) => {
+      const x = info.get(r.code) || {};
+      const who = esc(x.company || 'company product');
+      return x.in_development ? `<span class="kind-tag dev">In development · ${who}</span>`
+                              : `<span class="kind-tag inn">Innovation · ${who}</span>`;
+    };
     $('innovList').innerHTML = data.map((r) => `
       <li>
         ${r.image_path
           ? `<img class="innov-img" src="${imgBase + r.image_path.split('/').map(encodeURIComponent).join('/')}" alt="" loading="lazy">`
           : '<div class="innov-img" aria-hidden="true"></div>'}
+        ${tag(r)}
         <a href="innovation.html?code=${encodeURIComponent(r.code)}">${esc(r.name)}</a>
         <span class="innov-why${r.mentions_family ? ' named' : ''}">${r.mentions_family
           ? 'Mentions ' + esc(String(r.family_name).replace(/\s*\(.*\)/, '')) : 'Similar description'}</span>

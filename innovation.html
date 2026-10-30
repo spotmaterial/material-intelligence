@@ -126,7 +126,7 @@
 
   <div id="content" class="content" hidden>
     <div>
-      <p class="label">Innovation</p>
+      <p class="label" id="kindLabel">Innovation</p>
       <h1 id="name"></h1>
     </div>
 
@@ -204,6 +204,8 @@
     $('checked').innerHTML = d.checked && d.checked_at
       ? esc(new Date(d.checked_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }))
       : 'Not checked yet';
+    // Not yet on sale: say so in the heading label instead of "Innovation"
+    $('kindLabel').textContent = d.availability.includes('In development') ? 'In development' : 'Innovation';
     $('availability').innerHTML = d.availability.length
       ? esc(d.availability.join(', ')) + (d.checked ? '' : '<span class="draft">Draft</span>')
       : 'Not recorded';

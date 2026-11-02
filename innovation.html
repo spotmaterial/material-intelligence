@@ -80,6 +80,8 @@
   .badges { display: flex; flex-wrap: wrap; gap: 10px 16px; padding-top: 6px; }
   .badge { min-width: 170px; padding: 4px 8px; border-radius: 3px; color: #fff; font-size: 15px; line-height: 1.3; white-space: nowrap; }
   .badge.none { background: transparent; color: var(--muted); box-shadow: inset 0 0 0 1px var(--line); }
+  a.badge { text-decoration: none; display: inline-block; }
+  a.badge:hover, a.badge:focus-visible { text-decoration: underline; text-underline-offset: 2px; }
   .l1 { background: var(--r1); } .l2 { background: var(--r2); } .l3 { background: var(--r3); }
   .l4 { background: var(--r4); } .l5 { background: var(--r5); } .l6 { background: var(--r6); }
   li.fam { padding: 22px 0 8px; border-bottom: 1px solid var(--line); display: flex; flex-direction: column; }
@@ -183,10 +185,15 @@
     if (higherIsBetter) l = [0, 6, 5, 3, 2, 1][l] || 1;
     return 'l' + l;
   }
-  function badge(name, r, higherIsBetter) {
+  // link (optional): { code, name } of the material the rating comes from; the badge then links to its page
+  function badge(name, r, higherIsBetter, link) {
     const label = r && r.label ? r.label.toLowerCase() : 'no data';
     const fam = r && r.source === 'family' ? ' (family value)' : '';
-    return `<span class="badge ${levelClass(r, higherIsBetter)}" title="${esc(name + ': ' + label + fam)}">${esc(name)}: ${esc(label)}</span>`;
+    const from = link ? ', from ' + link.name : '';
+    const text = `${esc(name)}: ${esc(label)}`, title = esc(name + ': ' + label + fam + from);
+    return link
+      ? `<a class="badge ${levelClass(r, higherIsBetter)}" href="${href(link.code)}" title="${title}">${text}</a>`
+      : `<span class="badge ${levelClass(r, higherIsBetter)}" title="${title}">${text}</span>`;
   }
   const badgesFor = (r) => badge('Cost', r.cost, false) + badge('Carbon', r.carbon, false) + badge('Circularity potential', r.circularity, true);
 
@@ -228,7 +235,10 @@
     const hasRating = [d.cost, d.carbon, d.circularity].some((r) => r && r.level != null);
     $('ratingsWrap').hidden = !hasRating;
     if (hasRating) {
-      $('ratings').innerHTML = badgesFor(d);
+      // Badges link to the closest grade (Spotlight "Grade (draft)"), else to the family when there is just one
+      const g = d.grade ? { code: d.grade.code, name: [d.grade.family_name, d.grade.name].filter(Boolean).join(' ') + (d.grade.subfamily ? ` (${d.grade.subfamily})` : '') }
+        : (d.families.length === 1 ? d.families[0] : null);
+      $('ratings').innerHTML = badge('Cost', d.cost, false, g) + badge('Carbon', d.carbon, false, g) + badge('Circularity potential', d.circularity, true, g);
       $('ratingsBasis').textContent = 'Draft ratings. ' + (d.ratings_basis || '');
     }
 

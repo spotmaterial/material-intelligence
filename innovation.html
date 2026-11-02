@@ -232,14 +232,17 @@
     $('tags').innerHTML = tags.join('');
 
     // Ratings: drafted per innovation in Airtable (Cost / Carbon footprint / Circularity potential (draft))
+    // Always shown: entries with no grade and no product-specific figures read "no data"
     const hasRating = [d.cost, d.carbon, d.circularity].some((r) => r && r.level != null);
-    $('ratingsWrap').hidden = !hasRating;
-    if (hasRating) {
-      // Badges link to the closest grade (Spotlight "Grade (draft)"), else to the family when there is just one
-      const g = d.grade ? { code: d.grade.code, name: [d.grade.family_name, d.grade.name].filter(Boolean).join(' ') + (d.grade.subfamily ? ` (${d.grade.subfamily})` : '') }
-        : (d.families.length === 1 ? d.families[0] : null);
+    $('ratingsWrap').hidden = false;
+    {
+      // Badges link to the closest grade (Spotlight "Grade (draft)"); without a grade they don't link
+      const g = d.grade ? { code: d.grade.code, name: [d.grade.family_name, d.grade.name].filter(Boolean).join(' ') + (d.grade.subfamily ? ` (${d.grade.subfamily})` : '') } : null;
       $('ratings').innerHTML = badge('Cost', d.cost, false, g) + badge('Carbon', d.carbon, false, g) + badge('Circularity potential', d.circularity, true, g);
-      $('ratingsBasis').textContent = 'Draft ratings. ' + (d.ratings_basis || '');
+      // Ratings basis without the editors' notes (previous values, who decided)
+      const basis = (d.ratings_basis || '').replace(/\s*Previous values \(.*$/s, '').replace(/\s*\(Rob, [^)]*\)/g, '').trim();
+      $('ratingsBasis').textContent = hasRating ? 'Draft ratings. ' + basis
+        : 'No data: no closest standard grade and no figures for this product yet.';
     }
 
     $('loading').hidden = true;

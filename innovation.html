@@ -186,8 +186,8 @@
     return 'l' + l;
   }
   // link (optional): { code, name } of the material the rating comes from; the badge then links to its page
-  function badge(name, r, higherIsBetter, link) {
-    const label = r && r.label ? r.label.toLowerCase() : 'no data';
+  function badge(name, r, higherIsBetter, link, empty = 'no data') {
+    const label = r && r.label ? r.label.toLowerCase() : empty;
     const fam = r && r.source === 'family' ? ' (family value)' : '';
     const from = link ? ', from ' + link.name : '';
     const text = `${esc(name)}: ${esc(label)}`, title = esc(name + ': ' + label + fam + from);
@@ -238,11 +238,12 @@
     {
       // Badges link to the closest grade (Spotlight "Grade (draft)"); without a grade they don't link
       const g = d.grade ? { code: d.grade.code, name: [d.grade.family_name, d.grade.name].filter(Boolean).join(' ') + (d.grade.subfamily ? ` (${d.grade.subfamily})` : '') } : null;
-      $('ratings').innerHTML = badge('Cost', d.cost, false, g) + badge('Carbon', d.carbon, false, g) + badge('Circularity potential', d.circularity, true, g);
+      const NA = 'no data available';
+      $('ratings').innerHTML = badge('Cost', d.cost, false, g, NA) + badge('Carbon', d.carbon, false, g, NA) + badge('Circularity potential', d.circularity, true, g, NA);
       // Ratings basis without the editors' notes (previous values, who decided)
       const basis = (d.ratings_basis || '').replace(/\s*Previous values \(.*$/s, '').replace(/\s*\(Rob, [^)]*\)/g, '').trim();
       $('ratingsBasis').textContent = hasRating ? 'Draft ratings. ' + basis
-        : 'No data: no closest standard grade and no figures for this product yet.';
+        : 'No data available: no closest standard grade and no figures for this product yet.';
     }
 
     $('loading').hidden = true;

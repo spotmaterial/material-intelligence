@@ -60,6 +60,7 @@ score = 100 × Σ (weight × sub_score) / Σ weight   (only criteria that have d
 <script>
 const KEYS = ['carbon', 'cost', 'circularity'];
 let rows = [];
+let gone = new Set(); // innovation codes whose Availability is Discontinued
 
 function weights() { const w = {}; KEYS.forEach((k) => { w[k] = Number($('w_' + k).value); $('o_' + k).textContent = w[k]; }); return w; }
 
@@ -88,7 +89,7 @@ function render() {
     <td class="num">${anyW ? (s == null ? '–' : s) : ''}</td></tr>`).join('');
   $('results').hidden = !mats.length;
   const inns = rows.filter((r) => r.kind === 'innovation');
-  $('innov').innerHTML = inns.map((r) => `<li><a href="${pageFor(r.code, 'innovation')}">${esc(r.name)}</a></li>`).join('');
+  $('innov').innerHTML = inns.map((r) => `<li><a href="${pageFor(r.code, 'innovation')}">${esc(r.name)}</a>${gone.has(r.code) ? ' <span class="muted">(discontinued)</span>' : ''}</li>`).join('');
   $('innovWrap').hidden = !inns.length;
 }
 
@@ -114,6 +115,11 @@ async function search() {
     const total = rows.length ? Number(rows[0].total) : 0;
     $('status').textContent = total ? `${total} result${total === 1 ? '' : 's'}${total > rows.length ? ` (best ${rows.length} shown)` : ''}` : 'No results.';
     render();
+    // Mark innovations that are no longer made or can no longer be found
+    const codes = rows.filter((r) => r.kind === 'innovation').map((r) => r.code);
+    if (codes.length) rpc('innovation_companies', { p_codes: codes })
+      .then((list) => { gone = new Set((list || []).filter((x) => x.discontinued).map((x) => x.code)); render(); })
+      .catch(() => {});
   } catch (e) {
     rows = []; render();
     $('status').textContent = '';

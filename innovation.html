@@ -34,7 +34,9 @@
   if (!d || !d.name) { $('status').textContent = 'Innovation not found.'; return; }
   document.title = 'RED-Pro material database · ' + d.name;
   $('name').textContent = d.name;
-  $('meta').textContent = `Code ${d.code} · Innovation`;
+  // Products that can no longer be found stay listed, labelled Discontinued (Availability in the source data)
+  const gone = (d.availability || []).includes('Discontinued');
+  $('meta').textContent = `Code ${d.code} · ${gone ? 'Discontinued product: no longer made or no longer found' : 'Innovation'}`;
   $('summary').innerHTML = paras(d.summary);
   const list = (a) => (a || []).map(esc).join(', ');
   const rows = [

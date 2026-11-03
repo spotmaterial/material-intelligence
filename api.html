@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RED-Pro material database · API</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header><strong>RED-Pro material database</strong><a href="index.html">Search</a><a href="api.html">API</a><a href="about.html">About</a></header>
+<main>
+<h1>API</h1>
+<p>The database can be read over HTTPS with a public, read-only key. Every call is a <code>POST</code> with a JSON body and returns JSON. The same calls drive this website.</p>
+
+<h2>Base URL and key</h2>
+<pre>Base URL:  https://bjkkqawalpuvsubnbodt.supabase.co/rest/v1/rpc/
+Key:       sb_publishable_ZZN2JFwNHFbBLLjh2DE3cg_4t1YvQ7m</pre>
+<p>Send the key in both the <code>apikey</code> and <code>Authorization: Bearer</code> headers. The key can only run the read-only functions listed below.</p>
+
+<h2>Limits</h2>
+<p>Calls are rate-limited per connection. Normal research use stays well inside the limits; if you need larger volumes, get in touch rather than scraping. A request over the limit returns HTTP 429; wait and try again.</p>
+
+<h2>Endpoints</h2>
+<div class="wide"><table>
+<thead><tr><th>Function</th><th>Body</th><th>Returns</th></tr></thead>
+<tbody>
+<tr><td><code>search_materials_v2</code></td><td><code>{"q": "", "p_terms": ["application:packaging"], "p_exclude": [], "p_limit": 50}</code></td><td>Families, grades and innovations matching the filters, with cost, carbon and circularity levels (1–5)</td></tr>
+<tr><td><code>filter_options_v2</code></td><td><code>{}</code></td><td>All filter terms (<code>vocabulary</code>, <code>slug</code>, <code>label</code>, count). Use them as <code>"vocabulary:slug"</code> in <code>p_terms</code></td></tr>
+<tr><td><code>get_material_v2</code></td><td><code>{"p_code": "BA-0002"}</code></td><td>One family or grade: summary, property values with units, ratings, rules &amp; certifications, tags, family and grades</td></tr>
+<tr><td><code>related_materials</code></td><td><code>{"p_code": "BA-0002", "p_limit": 20}</code></td><td>Materials with shared applications and formats</td></tr>
+<tr><td><code>related_innovations</code></td><td><code>{"p_code": "BA-0002", "p_limit": 8}</code></td><td>Innovations related to a material</td></tr>
+<tr><td><code>get_innovation</code></td><td><code>{"p_code": "INN-0338"}</code></td><td>One innovation</td></tr>
+</tbody></table></div>
+<p>Word search (keywords plus meaning) runs through a separate endpoint: <code>POST https://bjkkqawalpuvsubnbodt.supabase.co/functions/v1/search</code> with <code>{"q": "acoustic panel", "terms": [], "exclude": [], "limit": 20}</code>; it returns <code>{"rows": [...]}</code> in the same shape as <code>search_materials_v2</code>.</p>
+
+<h2>Examples</h2>
+<h3>curl</h3>
+<pre>curl -s https://bjkkqawalpuvsubnbodt.supabase.co/rest/v1/rpc/get_material_v2 \
+  -H "apikey: sb_publishable_ZZN2JFwNHFbBLLjh2DE3cg_4t1YvQ7m" \
+  -H "Authorization: Bearer sb_publishable_ZZN2JFwNHFbBLLjh2DE3cg_4t1YvQ7m" \
+  -H "Content-Type: application/json" \
+  -d '{"p_code": "BA-0002"}'</pre>
+
+<h3>Python</h3>
+<pre>import requests
+
+BASE = "https://bjkkqawalpuvsubnbodt.supabase.co/rest/v1/rpc/"
+KEY = "sb_publishable_ZZN2JFwNHFbBLLjh2DE3cg_4t1YvQ7m"
+H = {"apikey": KEY, "Authorization": f"Bearer {KEY}"}
+
+rows = requests.post(BASE + "search_materials_v2", headers=H, json={
+    "q": "", "p_terms": ["application:packaging", "attribute:renewable"],
+    "p_exclude": [], "p_limit": 20}).json()
+for r in rows:
+    print(r["code"], r["name"], (r["carbon"] or {}).get("value"))</pre>
+
+<h3>JavaScript</h3>
+<pre>const KEY = 'sb_publishable_ZZN2JFwNHFbBLLjh2DE3cg_4t1YvQ7m';
+const res = await fetch('https://bjkkqawalpuvsubnbodt.supabase.co/rest/v1/rpc/get_material_v2', {
+  method: 'POST',
+  headers: { apikey: KEY, Authorization: 'Bearer ' + KEY, 'Content-Type': 'application/json' },
+  body: JSON.stringify({ p_code: 'BA-0002' })
+});
+const material = await res.json();</pre>
+
+<h2>Notes on the data</h2>
+<ul>
+  <li>Codes: families end in <code>-0000</code> (e.g. <code>BA-0000</code>), grades share the family prefix, innovations start with <code>INN-</code>.</li>
+  <li>Values are given as the original text (<code>raw</code>) and as numbers (<code>min</code>, <code>max</code> or <code>typical</code>). Some units are still marked <code>"unit_status": "proposed"</code>.</li>
+  <li>Ratings: levels 1–5 from banded thresholds; <code>better</code> says whether lower or higher is better; <code>source</code> is <code>own</code> or <code>family</code> (taken from the family when the grade has no value).</li>
+  <li>Rules &amp; certifications are what to check for a material, not compliance statements.</li>
+  <li>Innovations are not rated on the relative scales.</li>
+</ul>
+</main>
+<footer>
+  Developed in the RED-Pro project, funded by the European Union's Horizon Europe programme under grant agreement No 101286792. Views and opinions expressed are those of the authors only.<br>
+  Material data compiled by Rob Thompson. Figures are indicative; check the source and supplier data for your specific product.
+</footer>
+</body>
+</html>

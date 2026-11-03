@@ -1,0 +1,27 @@
+/* Deliberately plain: system fonts, black on white, tables. */
+body { font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: #000; background: #fff; margin: 0; }
+main, header, footer { max-width: 960px; margin: 0 auto; padding: 0 16px; }
+header { padding-top: 12px; border-bottom: 1px solid #000; padding-bottom: 8px; }
+header a { color: #000; margin-right: 16px; }
+header strong { margin-right: 24px; }
+h1 { font-size: 1.6em; margin: 0.8em 0 0.3em; }
+h2 { font-size: 1.2em; margin: 1.6em 0 0.4em; border-bottom: 1px solid #ccc; padding-bottom: 2px; }
+h3 { font-size: 1em; margin: 1.2em 0 0.3em; }
+a { color: #0645ad; }
+table { border-collapse: collapse; width: 100%; margin: 0.5em 0 1em; font-size: 0.95em; }
+th, td { border: 1px solid #bbb; padding: 4px 8px; text-align: left; vertical-align: top; }
+th { background: #f2f2f2; }
+td.num, th.num { text-align: right; white-space: nowrap; }
+fieldset { border: 1px solid #bbb; margin: 0 0 12px; padding: 8px 12px; }
+legend { font-weight: bold; }
+label { display: inline-block; margin: 4px 16px 4px 0; }
+input[type=search] { width: min(100%, 420px); font: inherit; padding: 4px; }
+select, button { font: inherit; }
+input[type=range] { vertical-align: middle; width: 140px; }
+.muted { color: #555; font-size: 0.9em; }
+.error { color: #b00; }
+code, pre { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 0.9em; background: #f4f4f4; }
+pre { padding: 8px; overflow-x: auto; white-space: pre-wrap; }
+footer { border-top: 1px solid #000; margin-top: 3em; padding: 8px 16px 24px; font-size: 0.85em; }
+[hidden] { display: none !important; }
+@media (max-width: 600px) { .wide { display: block; overflow-x: auto; } }

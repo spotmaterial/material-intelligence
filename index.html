@@ -224,7 +224,7 @@
 
   const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
-  // ---- Ratings -> coloured badge. Six bands; for cost and carbon higher is worse, for circularity higher is better.
+  // ---- Ratings -> coloured badge (grades only: company innovations get no cost/carbon/circularity badges). Six bands; for cost and carbon higher is worse, for circularity higher is better.
   function levelClass(r, higherIsBetter) {
     if (!r || r.level == null) return 'none';
     let l = Number(r.level);
@@ -438,14 +438,15 @@
         <a class="r-name" href="${href(r.code)}">${esc(withSub(r, shortName ? r.name : displayName(r)))}</a>
         <span class="r-why">${esc(whatMatches(r))}</span>
       </div>
-      ${r.kind === 'family' ? '' : `<div class="badges">${badgesFor(r)}</div>`}
+      ${r.kind === 'family' || r.kind === 'innovation' ? '' : `<div class="badges">${badgesFor(r)}</div>`}
     </div>`;
   }
 
   // Find better rows: show the improvement and the shared uses instead of "What matches"
   function betterRowHtml(r, shortName) {
     const fmt = (n) => String(+Number(n).toPrecision(3));
-    const val = r.value != null ? `${fmt(r.value)} ${r.unit || ''} (this one: ${fmt(r.baseline_value)})` : '';
+    // No cost, carbon or circularity figures on company innovations (Rob, 3 Nov 2026)
+    const val = r.value != null && r.kind !== 'innovation' ? `${fmt(r.value)} ${r.unit || ''} (this one: ${fmt(r.baseline_value)})` : '';
     const why = r.shared_reasons && r.shared_reasons.length ? 'Shares: ' + r.shared_reasons.join(', ') : (r.class_label || '');
     return `<div class="row">
       <div class="r-main">
@@ -454,7 +455,7 @@
         ${val ? `<span class="r-val">${esc(val)}</span>` : ''}
         ${why ? `<span class="r-why">${esc(why)}</span>` : ''}
       </div>
-      ${r.kind === 'family' ? '' : `<div class="badges">${badgesFor(r)}</div>`}
+      ${r.kind === 'family' || r.kind === 'innovation' ? '' : `<div class="badges">${badgesFor(r)}</div>`}
     </div>`;
   }
 

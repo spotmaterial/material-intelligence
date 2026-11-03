@@ -165,7 +165,7 @@
     </section>
   </div>
 
-  <footer>Test build of the Spot Material innovation page. Company, availability, ratings and tags are drafts from Airtable until checked.</footer>
+  <footer>Test build of the Spot Material innovation page. Company, availability and tags are drafts from Airtable until checked.</footer>
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -231,20 +231,9 @@
     ];
     $('tags').innerHTML = tags.join('');
 
-    // Ratings: drafted per innovation in Airtable (Cost / Carbon footprint / Circularity potential (draft))
-    // Always shown: entries with no grade and no product-specific figures read "no data"
-    const hasRating = [d.cost, d.carbon, d.circularity].some((r) => r && r.level != null);
-    $('ratingsWrap').hidden = false;
-    {
-      // Badges link to the closest grade (Spotlight "Grade (draft)"); without a grade they don't link
-      const g = d.grade ? { code: d.grade.code, name: [d.grade.family_name, d.grade.name].filter(Boolean).join(' ') + (d.grade.subfamily ? ` (${d.grade.subfamily})` : '') } : null;
-      const NA = 'no data available';
-      $('ratings').innerHTML = badge('Cost', d.cost, false, g, NA) + badge('Carbon', d.carbon, false, g, NA) + badge('Circularity potential', d.circularity, true, g, NA);
-      // Ratings basis without the editors' notes (previous values, who decided)
-      const basis = (d.ratings_basis || '').replace(/\s*Previous values \(.*$/s, '').replace(/\s*\(Rob, [^)]*\)/g, '').trim();
-      $('ratingsBasis').textContent = hasRating ? 'Draft ratings. ' + basis
-        : 'No data available: no closest standard grade and no figures for this product yet.';
-    }
+    // No cost, carbon or circularity badges on a company's innovation (Rob, 3 Nov 2026): a relative scale
+    // can show products in a poor light. The values stay in Airtable/Supabase for internal use.
+    $('ratingsWrap').hidden = true;
 
     $('loading').hidden = true;
     $('content').hidden = false;
@@ -280,7 +269,7 @@
         <a class="r-name" href="${href(r.code)}">${esc(withSub(r, shortName ? r.name : displayName(r)))}</a>
         ${why ? `<span class="r-why">${esc(why)}</span>` : ''}
       </div>
-      ${r.kind === 'family' ? '' : `<div class="badges">${badgesFor(r)}</div>`}
+      ${r.kind === 'family' || r.kind === 'innovation' ? '' : `<div class="badges">${badgesFor(r)}</div>`}
     </div>`;
   }
   function groupedHtml(rows) {

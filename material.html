@@ -89,7 +89,7 @@ function ruleTable(list) {
   vals.forEach((v) => { (groups[v.category] = groups[v.category] || []).push(v); });
   $('props').innerHTML = vals.length ? Object.keys(groups).map((g) => `<h3>${esc(CAT[g] || g)}</h3><div class="wide"><table>
     <thead><tr><th>Property</th><th class="num">Value</th><th>Unit</th><th>Condition</th></tr></thead><tbody>${groups[g].map((v) => `<tr>
-    <td>${esc(v.label)}</td><td class="num">${esc(v.raw ?? (v.typical ?? [v.min, v.max].filter((x) => x != null).join('–')))}</td>
+    <td>${esc(v.label)}</td><td class="num">${esc(v.raw ?? (v.typical ?? [v.min, v.max].filter((x) => x != null).join('–')))}${v.est ? ' <em title="Estimate: not yet confirmed against a published source">est.</em>' : ''}</td>
     <td>${esc(v.unit || '')}</td><td>${esc([v.condition, v.basis].filter(Boolean).join('; '))}</td></tr>`).join('')}</tbody></table></div>`).join('')
     : '<p class="muted">No property values for this record.</p>';
 
